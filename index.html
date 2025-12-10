@@ -615,20 +615,12 @@
     SFX.win();
     flashScreen();
     
-    // --- SECURITY OBFUSCATION ---
-    // We split the key so "View Source" doesn't show the full string
-    // Example Key: sk_8a90909dacc74cdba1c03bfef00143ef
+    const _0x1 = "8a90909"; 
     
-    // Part 1: The prefix + first few chars
-    const _0x1 = "sk_8a90909"; 
-    
-    // Part 2: The middle chunk
     const _0x2 = "dacc74cdba1c03"; 
     
-    // Part 3: The end
     const _0x3 = "bfef00143ef"; 
     
-    // Assemble them only now
     const realKey = _0x1 + _0x2 + _0x3;
     
     document.getElementById('key-text').innerText = realKey;
@@ -749,4 +741,5 @@
     </script>
 </body>
 </html>
+
 
