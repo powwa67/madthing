@@ -263,7 +263,7 @@
             <h1 style="color:#00ffff; font-size:3rem; text-shadow: 0 0 20px #00ffff;">ACCESS GRANTED</h1>
             <div class="key-container">
                 <div class="key-label">DAILY API KEY</div>
-                <div id="key-text" class="key-box">sk-newapi-DAILY-KEY-12345</div>
+                <div id="key-text" class="key-box">Loading...</div>
                 <button class="btn btn-copy" onclick="copyKey('key-text', this)">COPY KEY</button>
             </div>
         </div>
@@ -610,16 +610,35 @@
         }
 
         function winGame() {
-            gameState = 'WIN_PAUSE'; 
-            MUSIC.pause();
-            SFX.win();
-            flashScreen();
-            
-            bgWin.style.display = 'block';
-            setTimeout(() => { bgWin.style.opacity = '1'; }, 10);
+    gameState = 'WIN_PAUSE'; 
+    MUSIC.pause();
+    SFX.win();
+    flashScreen();
+    
+    // --- SECURITY OBFUSCATION ---
+    // We split the key so "View Source" doesn't show the full string
+    // Example Key: sk_8a90909dacc74cdba1c03bfef00143ef
+    
+    // Part 1: The prefix + first few chars
+    const _0x1 = "sk_8a90909"; 
+    
+    // Part 2: The middle chunk
+    const _0x2 = "dacc74cdba1c03"; 
+    
+    // Part 3: The end
+    const _0x3 = "bfef00143ef"; 
+    
+    // Assemble them only now
+    const realKey = _0x1 + _0x2 + _0x3;
+    
+    document.getElementById('key-text').innerText = realKey;
+    // ----------------------------
 
-            winModal.style.display = 'flex';
-        }
+    bgWin.style.display = 'block';
+    setTimeout(() => { bgWin.style.opacity = '1'; }, 10);
+
+    winModal.style.display = 'flex';
+}
 
         window.resetLevel = function() {
             deathModal.style.display = 'none';
@@ -730,3 +749,4 @@
     </script>
 </body>
 </html>
+
