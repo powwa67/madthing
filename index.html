@@ -342,12 +342,17 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- ADVANCED AUDIO ENGINE ---
+        // --- AUDIO ENGINE (SFX + External Music) ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
-        let bgmOscillators = [];
-        let bgmInterval = null;
-        let bgmNoteIndex = 0;
+
+        // Initialize Music Objects (Must be named bgm_level1.mp3 and bgm_level2.mp3)
+        const BGM_L1 = new Audio('bgm_level1.mp3');
+        const BGM_L2 = new Audio('bgm_level2.mp3');
+        BGM_L1.loop = true;
+        BGM_L2.loop = true;
+        BGM_L1.volume = 0.7;
+        BGM_L2.volume = 0.7;
 
         function playTone(freq, type, duration, vol=0.1, delay=0) {
             if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -366,8 +371,7 @@
             jump: () => playTone(150, 'square', 0.1, 0.05),
             score: () => playTone(1200, 'sine', 0.1, 0.05),
             win: () => {
-                // Victory Fanfare
-                let notes = [523.25, 659.25, 783.99, 1046.50]; // C Major
+                let notes = [523.25, 659.25, 783.99, 1046.50]; // C Major Fanfare
                 notes.forEach((n, i) => playTone(n, 'triangle', 0.4, 0.1, i*0.1));
             },
             explode: () => {
@@ -386,40 +390,17 @@
         };
 
         const MUSIC = {
-            start: () => {
-                if(bgmInterval) clearInterval(bgmInterval);
-                bgmNoteIndex = 0;
-                
-                let tempo = MODE === 'NORMAL' ? 150 : 300; // ms per note
-                
-                bgmInterval = setInterval(() => {
-                    if(gameState !== 'PLAY') return;
-
-                    if(MODE === 'NORMAL') {
-                        // Retro Future Arpeggio (C Minor Pentatonic)
-                        const scale = [261.63, 311.13, 392.00, 523.25]; 
-                        let note = scale[bgmNoteIndex % scale.length];
-                        playTone(note, 'sawtooth', 0.1, 0.03);
-                        // Bass
-                        if(bgmNoteIndex % 4 === 0) playTone(65.41, 'square', 0.2, 0.08);
-                    } else {
-                        // Dark Horror (Dissonant & Low)
-                        if(bgmNoteIndex % 8 === 0) {
-                            // Deep drone
-                            playTone(55.00, 'sawtooth', 0.8, 0.15); // A1
-                            playTone(58.27, 'sawtooth', 0.8, 0.10); // A#1 (Dissonance)
-                        }
-                        // Random high creepy blip
-                        if(Math.random() > 0.7) {
-                            playTone(880 + Math.random()*500, 'sine', 0.2, 0.02);
-                        }
-                    }
-                    bgmNoteIndex++;
-                }, tempo);
+            playLevel1: () => {
+                BGM_L2.pause(); BGM_L2.currentTime = 0;
+                BGM_L1.play().catch(e => console.log("Click to start audio"));
             },
-            stop: () => {
-                if(bgmInterval) clearInterval(bgmInterval);
-                bgmInterval = null;
+            playLevel2: () => {
+                BGM_L1.pause(); BGM_L1.currentTime = 0;
+                BGM_L2.play().catch(e => console.log("Click to start audio"));
+            },
+            stopAll: () => {
+                BGM_L1.pause(); BGM_L1.currentTime = 0;
+                BGM_L2.pause(); BGM_L2.currentTime = 0;
             }
         };
 
@@ -692,7 +673,7 @@
 
         // --- CORE LOGIC ---
         function die(isTimeout = false) {
-            MUSIC.stop();
+            MUSIC.stopAll();
             flashScreen();
             triggerBigShake();
             createExplosion(player.x, player.y, MODE==='DEMON'?'#f00':'#0ff');
@@ -732,7 +713,6 @@
                     fullReset();
                 } else {
                     // Soft Reset for Demon Mode
-                    // BUG FIX: Instead of instantly going to 'PLAY', we go to 'START' so the user can tap to jump.
                     resetEntities();
                     gameState = 'START';
                     // Ensure the title is correct
@@ -741,7 +721,6 @@
                     titleEl.style.color = "#f00";
                     titleEl.style.textShadow = "0 0 40px #f00";
                     document.getElementById('main-menu').style.display = 'block';
-                    // Timer is NOT stopped here, so it continues ticking
                 }
             }
         };
@@ -826,7 +805,7 @@
         // Resets the whole level state
         function resetLevel(keepTimer = false) {
             gameState = 'START';
-            MUSIC.stop();
+            MUSIC.stopAll();
             resetEntities();
             
             if(!keepTimer) stopTimer();
@@ -849,7 +828,9 @@
             if(audioCtx.state === 'suspended') audioCtx.resume(); 
             
             gameState = 'PLAY';
-            MUSIC.start();
+            if(MODE === 'NORMAL') MUSIC.playLevel1();
+            else MUSIC.playLevel2();
+            
             document.getElementById('main-menu').style.display = 'none';
             player.velocity = -JUMP;
             loop();
@@ -857,7 +838,7 @@
 
         function levelWin() {
             gameState = 'WIN';
-            MUSIC.stop();
+            MUSIC.stopAll();
             stopTimer();
             createExplosion(player.x, player.y, '#fff');
             flashScreen();
