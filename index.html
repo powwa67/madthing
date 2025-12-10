@@ -609,22 +609,18 @@
             }, 800);
         }
 
-        function winGame() {
+function winGame() {
     gameState = 'WIN_PAUSE'; 
     MUSIC.pause();
     SFX.win();
     flashScreen();
     
-    const _0x1 = "8a90909"; 
+    const _0x9a2b = "dGVzdA=="; 
     
-    const _0x2 = "dacc74cdba1c03"; 
+    const _payload = atob(_0x9a2b);
     
-    const _0x3 = "bfef00143ef"; 
-    
-    const realKey = _0x1 + _0x2 + _0x3;
-    
-    document.getElementById('key-text').innerText = realKey;
-    // ----------------------------
+    document.getElementById('key-text').innerText = _payload;
+    // -------------------------
 
     bgWin.style.display = 'block';
     setTimeout(() => { bgWin.style.opacity = '1'; }, 10);
@@ -741,5 +737,6 @@
     </script>
 </body>
 </html>
+
 
 
