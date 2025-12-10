@@ -342,11 +342,11 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- AUDIO ENGINE (External Music + SFX) ---
+        // --- AUDIO ENGINE ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        // Music setup
+        // Music
         const BGM_L1 = new Audio('bgm_level1.mp3');
         const BGM_L2 = new Audio('bgm_level2.mp3');
         BGM_L1.loop = true;
@@ -354,7 +354,7 @@
         BGM_L1.volume = 0.6;
         BGM_L2.volume = 0.6;
         
-        let currentTrack = null; // Tracks which file is playing
+        let currentTrack = null; 
 
         function playTone(freq, type, duration, vol=0.1, delay=0) {
             if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -393,13 +393,13 @@
 
         const MUSIC = {
             playLevel1: () => {
-                if(currentTrack === 'L1') return; // Don't restart if already playing
+                if(currentTrack === 'L1') return;
                 BGM_L2.pause(); BGM_L2.currentTime = 0;
                 BGM_L1.play().catch(e => console.log("Click to start audio"));
                 currentTrack = 'L1';
             },
             playLevel2: () => {
-                if(currentTrack === 'L2') return; // Don't restart if already playing
+                if(currentTrack === 'L2') return; 
                 BGM_L1.pause(); BGM_L1.currentTime = 0;
                 BGM_L2.play().catch(e => console.log("Click to start audio"));
                 currentTrack = 'L2';
@@ -425,6 +425,12 @@
         let shockwaves = [];
         let floatTexts = []; 
         
+        // --- FIXED TIMESTEP LOGIC ---
+        // This ensures physics runs at exactly 60 FPS regardless of Screen Hz
+        const TIME_STEP = 1000 / 60; // 16.666 ms
+        let lastTime = 0;
+        let accumulator = 0;
+
         // --- COPY FUNCTION ---
         async function copyKey(elementId, btnElement) {
             const text = document.getElementById(elementId).innerText;
@@ -463,8 +469,7 @@
             draw: function() {
                 for(let i=0; i<trail.length; i++) {
                     let t = trail[i];
-                    t.alpha -= 0.08;
-                    if(t.alpha < 0) t.alpha = 0;
+                    // Alpha decay moved to fixed update for consistency
                     ctx.save();
                     ctx.translate(t.x + this.size/2, t.y + this.size/2);
                     ctx.rotate(t.rot * Math.PI / 180);
@@ -584,9 +589,9 @@
             ctx.fillStyle = bgColor;
             ctx.fillRect(0,0,width,height);
 
-            bgOffset -= SPEED * 0.5;
-            if(bgOffset < -100) bgOffset = 0;
-
+            // Update background offset in fixed update for consistency
+            // but drawing logic is here
+            
             ctx.lineWidth = 2;
             let gridColor = MODE === 'DEMON' ? 'rgba(255, 0, 0, 0.2)' : `hsla(${globalHue}, 100%, 50%, 0.15)`;
             ctx.strokeStyle = gridColor;
@@ -603,8 +608,6 @@
             ctx.fillStyle = "#fff";
             for(let p of particles) {
                 if(p.type === 'dust') {
-                    p.x -= p.speed;
-                    if(p.x < 0) p.x = width;
                     ctx.globalAlpha = Math.random(); 
                     ctx.fillRect(p.x, p.y, p.size, p.size);
                 }
@@ -680,7 +683,6 @@
 
         // --- CORE LOGIC ---
         function die(isTimeout = false) {
-            // NOTE: We do NOT stop music here!
             flashScreen();
             triggerBigShake();
             createExplosion(player.x, player.y, MODE==='DEMON'?'#f00':'#0ff');
@@ -713,16 +715,13 @@
         window.handleDeathAction = function() {
             deathModal.style.display = 'none';
             if(MODE === 'NORMAL') {
-                resetLevel(false); // Full reset Level 1 (Music track matches, continues)
+                resetLevel(false); 
             } else {
-                // Check if we died due to timeout
                 if(TIMER <= 0) {
                     fullReset();
                 } else {
-                    // Soft Reset for Demon Mode
                     resetEntities();
-                    gameState = 'START'; // Pause logic
-                    // Ensure the title is correct
+                    gameState = 'START';
                     titleEl.innerHTML = "HELL<br>MODE";
                     titleEl.className = "";
                     titleEl.style.color = "#f00";
@@ -732,27 +731,85 @@
             }
         };
 
-        function loop() {
+        // --- PHYSICS UPDATE (RUNS AT FIXED 60 FPS) ---
+        function updatePhysics() {
             if(gameState !== 'PLAY' && gameState !== 'DIE_ANIM') return;
             
+            // Background scrolling logic
+            bgOffset -= SPEED * 0.5;
+            if(bgOffset < -100) bgOffset = 0;
+
+            // Global Hue
             if(MODE === 'NORMAL') globalHue = (globalHue + 1) % 360;
             else globalHue = 0;
 
             frames++;
-            drawGridBackground();
 
-            ctx.lineWidth = 4;
+            // Particles Logic
+            for(let p of particles) {
+                if(p.type === 'dust') {
+                    p.x -= p.speed;
+                    if(p.x < 0) p.x = width;
+                } else if(p.type === 'explode') {
+                    p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+                }
+            }
+            particles = particles.filter(p => p.type === 'dust' || p.life > 0);
+
+            // Shockwaves
             for(let s of shockwaves) {
                 s.r += 10; s.alpha -= 0.05;
+            }
+            shockwaves = shockwaves.filter(s => s.alpha > 0);
+
+            // Floating Text
+            for(let f of floatTexts) {
+                f.y += f.vy; f.life -= 0.02;
+            }
+            floatTexts = floatTexts.filter(f => f.life > 0);
+
+            // Trail Fade
+            for(let t of trail) {
+                t.alpha -= 0.08;
+            }
+            
+            // Game Entities
+            if(gameState === 'PLAY') {
+                obstacles.update();
+                player.update();
+                if(player.y > height || player.y < -50) die();
+            }
+        }
+
+        // --- MAIN LOOP (RUNS AT MONITOR REFRESH RATE) ---
+        function loop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            let deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+
+            // Prevent spiral of death if browser lags significantly
+            if (deltaTime > 1000) deltaTime = 1000;
+            
+            accumulator += deltaTime;
+
+            // Consume time step
+            while (accumulator >= TIME_STEP) {
+                updatePhysics();
+                accumulator -= TIME_STEP;
+            }
+
+            // Draw Everything
+            drawGridBackground();
+            
+            ctx.lineWidth = 4;
+            for(let s of shockwaves) {
                 ctx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`;
                 ctx.beginPath(); ctx.arc(s.x + 15, s.y + 15, s.r, 0, Math.PI*2); ctx.stroke();
             }
-            shockwaves = shockwaves.filter(s => s.alpha > 0);
             
             ctx.font = "900 24px 'Russo One'";
             ctx.textAlign = "center";
             for(let f of floatTexts) {
-                f.y += f.vy; f.life -= 0.02;
                 ctx.save();
                 ctx.fillStyle = "#fff";
                 ctx.strokeStyle = "#000";
@@ -764,27 +821,17 @@
                 ctx.fillText(f.text, f.x, f.y);
                 ctx.restore();
             }
-            floatTexts = floatTexts.filter(f => f.life > 0);
-
-            if(gameState === 'PLAY') {
-                obstacles.update();
-                player.update();
-            }
 
             obstacles.draw();
-            if(gameState === 'PLAY') player.draw();
+            if(gameState === 'PLAY' || gameState === 'DIE_ANIM') player.draw();
 
             for(let p of particles) {
                 if(p.type === 'explode') {
-                    p.x += p.vx; p.y += p.vy; p.life -= 0.03;
                     ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
                     ctx.fillRect(p.x, p.y, p.size, p.size);
                 }
             }
             ctx.globalAlpha = 1;
-            particles = particles.filter(p => p.type === 'dust' || p.life > 0);
-
-            if(gameState === 'PLAY' && (player.y > height || player.y < -50)) die();
 
             requestAnimationFrame(loop);
         }
@@ -817,8 +864,6 @@
             
             if(!keepTimer) stopTimer();
             initParticles();
-            drawGridBackground();
-            player.draw();
             
             document.getElementById('main-menu').style.display = 'block';
             titleEl.innerHTML = MODE === 'NORMAL' ? "POWA<br>PROXY" : "HELL<br>MODE";
@@ -828,6 +873,10 @@
                 titleEl.style.textShadow = "0 0 40px #f00";
                 timerEl.style.display = 'block'; 
             }
+            
+            // Force one render to clear screen
+            drawGridBackground();
+            player.draw();
         }
 
         function startGame() {
@@ -840,12 +889,12 @@
             
             document.getElementById('main-menu').style.display = 'none';
             player.velocity = -JUMP;
-            loop();
+            // loop is already running via requestAnimationFrame
         }
 
         function levelWin() {
             gameState = 'WIN';
-            MUSIC.stopAll(); // STOP music on WIN so we can hear victory SFX/Reward screen
+            MUSIC.stopAll();
             stopTimer();
             createExplosion(player.x, player.y, '#fff');
             flashScreen();
@@ -894,7 +943,7 @@
 
         window.fullReset = function() {
             deathModal.style.display = 'none';
-            MUSIC.stopAll(); // Hard reset = Stop music
+            MUSIC.stopAll(); 
             MODE = 'NORMAL';
             TARGET_SCORE = 30;
             SPEED = 6.5;      
@@ -931,6 +980,7 @@
 
         initParticles();
         resetLevel();
+        requestAnimationFrame(loop); // Start the loop immediately
 
     </script>
 </body>
