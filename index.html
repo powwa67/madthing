@@ -342,17 +342,19 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- AUDIO ENGINE (SFX + External Music) ---
+        // --- AUDIO ENGINE (External Music + SFX) ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        // Initialize Music Objects (Must be named bgm_level1.mp3 and bgm_level2.mp3)
+        // Music setup
         const BGM_L1 = new Audio('bgm_level1.mp3');
         const BGM_L2 = new Audio('bgm_level2.mp3');
         BGM_L1.loop = true;
         BGM_L2.loop = true;
-        BGM_L1.volume = 0.7;
-        BGM_L2.volume = 0.7;
+        BGM_L1.volume = 0.6;
+        BGM_L2.volume = 0.6;
+        
+        let currentTrack = null; // Tracks which file is playing
 
         function playTone(freq, type, duration, vol=0.1, delay=0) {
             if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -371,7 +373,7 @@
             jump: () => playTone(150, 'square', 0.1, 0.05),
             score: () => playTone(1200, 'sine', 0.1, 0.05),
             win: () => {
-                let notes = [523.25, 659.25, 783.99, 1046.50]; // C Major Fanfare
+                let notes = [523.25, 659.25, 783.99, 1046.50];
                 notes.forEach((n, i) => playTone(n, 'triangle', 0.4, 0.1, i*0.1));
             },
             explode: () => {
@@ -391,16 +393,21 @@
 
         const MUSIC = {
             playLevel1: () => {
+                if(currentTrack === 'L1') return; // Don't restart if already playing
                 BGM_L2.pause(); BGM_L2.currentTime = 0;
                 BGM_L1.play().catch(e => console.log("Click to start audio"));
+                currentTrack = 'L1';
             },
             playLevel2: () => {
+                if(currentTrack === 'L2') return; // Don't restart if already playing
                 BGM_L1.pause(); BGM_L1.currentTime = 0;
                 BGM_L2.play().catch(e => console.log("Click to start audio"));
+                currentTrack = 'L2';
             },
             stopAll: () => {
                 BGM_L1.pause(); BGM_L1.currentTime = 0;
                 BGM_L2.pause(); BGM_L2.currentTime = 0;
+                currentTrack = null;
             }
         };
 
@@ -673,7 +680,7 @@
 
         // --- CORE LOGIC ---
         function die(isTimeout = false) {
-            MUSIC.stopAll();
+            // NOTE: We do NOT stop music here!
             flashScreen();
             triggerBigShake();
             createExplosion(player.x, player.y, MODE==='DEMON'?'#f00':'#0ff');
@@ -706,7 +713,7 @@
         window.handleDeathAction = function() {
             deathModal.style.display = 'none';
             if(MODE === 'NORMAL') {
-                resetLevel(false); // Full reset Level 1
+                resetLevel(false); // Full reset Level 1 (Music track matches, continues)
             } else {
                 // Check if we died due to timeout
                 if(TIMER <= 0) {
@@ -714,7 +721,7 @@
                 } else {
                     // Soft Reset for Demon Mode
                     resetEntities();
-                    gameState = 'START';
+                    gameState = 'START'; // Pause logic
                     // Ensure the title is correct
                     titleEl.innerHTML = "HELL<br>MODE";
                     titleEl.className = "";
@@ -805,7 +812,7 @@
         // Resets the whole level state
         function resetLevel(keepTimer = false) {
             gameState = 'START';
-            MUSIC.stopAll();
+            // MUSIC NOTE: We do NOT stop music here.
             resetEntities();
             
             if(!keepTimer) stopTimer();
@@ -838,7 +845,7 @@
 
         function levelWin() {
             gameState = 'WIN';
-            MUSIC.stopAll();
+            MUSIC.stopAll(); // STOP music on WIN so we can hear victory SFX/Reward screen
             stopTimer();
             createExplosion(player.x, player.y, '#fff');
             flashScreen();
@@ -887,6 +894,7 @@
 
         window.fullReset = function() {
             deathModal.style.display = 'none';
+            MUSIC.stopAll(); // Hard reset = Stop music
             MODE = 'NORMAL';
             TARGET_SCORE = 30;
             SPEED = 6.5;      
