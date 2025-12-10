@@ -176,12 +176,6 @@
         }
         .btn-copy:active { box-shadow: 0 0 0 #003366; }
 
-        .btn-secret {
-            background: linear-gradient(180deg, #8800ff, #440088);
-            box-shadow: 0 6px 0 #220044, 0 0 30px #bd00ff;
-        }
-        .btn-secret:active { box-shadow: 0 0 0 #220044; }
-
         .key-container {
             margin: 20px 0;
             width: 100%;
@@ -210,16 +204,6 @@
             text-transform: uppercase;
             letter-spacing: 2px;
         }
-
-        .continue-link {
-            color: #fff;
-            text-decoration: underline;
-            margin-top: 15px;
-            cursor: pointer;
-            font-size: 1rem;
-            text-shadow: 0 0 10px #000;
-        }
-        .continue-link:hover { color: #0ff; }
 
         #flash-overlay {
             position: absolute;
@@ -270,18 +254,6 @@
                 <div id="key-text" class="key-box">sk-newapi-DAILY-KEY-12345</div>
                 <button class="btn btn-copy" onclick="copyKey('key-text', this)">COPY KEY</button>
             </div>
-            <div class="continue-link" onclick="continuePlaying()">Continue playing for fun?</div>
-        </div>
-
-        <div id="secret-modal" class="modal">
-            <h1 style="color:#bd00ff; font-size:3.5rem; text-shadow: 0 0 40px #bd00ff;">LEGENDARY</h1>
-            <p style="color:#fff; margin-bottom: 20px;">You actually did it.</p>
-            <div class="key-container">
-                <div class="key-label" style="color:#d0f;">SECRET KEY</div>
-                <div id="secret-key-text" class="key-box" style="border-color:#bd00ff; color:#e0f;">sk-newapi-SECRET-99999</div>
-                <button class="btn btn-copy btn-secret" onclick="copyKey('secret-key-text', this)">COPY KEY</button>
-            </div>
-            <p style="color:#aaa; font-size:0.8rem; margin-top:10px;">Screenshot this and contact <b>Powa</b> on Discord.</p>
         </div>
     </div>
 
@@ -294,14 +266,12 @@
         
         const deathModal = document.getElementById('death-modal');
         const winModal = document.getElementById('win-modal');
-        const secretModal = document.getElementById('secret-modal');
         
         const bgFail = document.getElementById('bg-fail');
         const bgWin = document.getElementById('bg-win');
 
         // --- GAME CONFIG ---
-        let TARGET_SCORE = 20; 
-        let SECRET_SCORE = 50;
+        let TARGET_SCORE = 30; // Points to win
         let SPEED = 6.5;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
@@ -345,10 +315,6 @@
                 let notes = [523.25, 659.25, 783.99, 1046.50];
                 notes.forEach((n, i) => playTone(n, 'triangle', 0.4, 0.1, i*0.1));
             },
-            secret: () => {
-                let notes = [261, 329, 392, 523, 1046]; 
-                notes.forEach((n, i) => playTone(n, 'sawtooth', 0.6, 0.2, i*0.15));
-            },
             explode: () => {
                 const bufferSize = audioCtx.sampleRate * 0.5;
                 const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
@@ -375,7 +341,6 @@
         let frames = 0;
         let score = 0;
         let gameState = 'START';
-        let isEndless = false; 
         let globalHue = 0; 
         let bgOffset = 0;  
         
@@ -424,11 +389,9 @@
         }
 
         function updateProgress() {
-            let limit = isEndless ? SECRET_SCORE : TARGET_SCORE;
-            let pct = Math.min(100, (score / limit) * 100);
+            let pct = Math.min(100, (score / TARGET_SCORE) * 100);
             progressFill.style.width = pct + "%";
-            if(isEndless) progressFill.style.background = "linear-gradient(90deg, #bd00ff, #fff)";
-            else progressFill.style.background = "linear-gradient(90deg, #00ffff, #bd00ff)";
+            progressFill.style.background = "linear-gradient(90deg, #00ffff, #bd00ff)";
         }
 
         // --- GALAXY ---
@@ -498,8 +461,7 @@
                             floatTexts.push({text: words[Math.floor(Math.random()*words.length)], x: player.x, y: player.y-40, life: 1.0, vy: -2});
                         }
                         
-                        if(!isEndless && score >= TARGET_SCORE) winGame();
-                        if(isEndless && score >= SECRET_SCORE) secretWin();
+                        if(score >= TARGET_SCORE) winGame();
                     }
                 }
                 if(this.list.length > 0 && this.list[0].x < -100) this.list.shift();
@@ -545,36 +507,8 @@
             winModal.style.display = 'flex';
         }
 
-        function secretWin() {
-            gameState = 'WIN_SECRET';
-            MUSIC.stop();
-            SFX.secret();
-            flashScreen();
-            secretModal.style.display = 'flex';
-        }
-
-        window.continuePlaying = function() {
-            winModal.style.display = 'none';
-            isEndless = true;
-            
-            // FIX: Reset physics safely
-            player.y = height/2; 
-            player.velocity = 0; 
-            player.rotation = 0;
-            obstacles.list = []; // Clear immediate threats
-
-            gameState = 'PLAY';
-            MUSIC.resume();
-            
-            bgWin.style.opacity = '0';
-            setTimeout(() => { bgWin.style.display = 'none'; }, 500);
-
-            updateProgress();
-        };
-
         window.resetLevel = function() {
             deathModal.style.display = 'none';
-            secretModal.style.display = 'none';
             
             bgFail.style.opacity = '0';
             bgWin.style.opacity = '0';
@@ -585,7 +519,6 @@
 
             gameState = 'START';
             score = 0; frames = 0;
-            isEndless = false;
             updateProgress();
             
             player.y = height/2; player.velocity = 0; player.rotation = 0;
@@ -660,7 +593,7 @@
 
         function handleInput(e) {
             if(e.type === 'keydown' && e.code === 'Space') e.preventDefault();
-            if(gameState === 'WIN_PAUSE' || gameState === 'WIN_SECRET') return;
+            if(gameState === 'WIN_PAUSE') return;
             if(gameState === 'START') startGame();
             else if(gameState === 'PLAY') {
                 player.velocity = -JUMP; SFX.jump();
