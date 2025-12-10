@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GEOMETRY GATE: PERMADEATH</title>
+    <title>GEOMETRY GATE: HYPER</title>
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -25,10 +25,9 @@
             -webkit-user-select: none;
         }
 
-        /* The Game Container */
         #game-wrapper {
             position: relative;
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 60px rgba(0, 255, 255, 0.3);
             border: 3px solid #fff;
             border-radius: 8px;
             width: 100%;
@@ -40,12 +39,12 @@
             transition: border-color 0.5s, box-shadow 0.5s;
         }
 
-        /* Shake Animation Class */
-        .shake-effect {
-            animation: violent-shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
-        }
+        /* Animations */
+        .shake-small { animation: shake-s 0.1s; }
+        .shake-big { animation: shake-b 0.4s cubic-bezier(.36,.07,.19,.97) both; }
 
-        @keyframes violent-shake {
+        @keyframes shake-s { 0% { transform: translate(0,0); } 50% { transform: translate(0, 3px); } 100% { transform: translate(0,0); } }
+        @keyframes shake-b { 
             10%, 90% { transform: translate3d(-4px, 0, 0); }
             20%, 80% { transform: translate3d(6px, 0, 0); }
             30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
@@ -54,7 +53,6 @@
 
         canvas { display: block; width: 100%; height: 100%; }
 
-        /* UI Overlay */
         #ui-layer {
             position: absolute;
             top: 0; left: 0;
@@ -66,7 +64,6 @@
             z-index: 10;
         }
 
-        /* Top Bar: Lives & Progress */
         #top-bar {
             display: flex;
             justify-content: space-between;
@@ -79,29 +76,31 @@
         #lives-display {
             color: #fff;
             font-size: 1.2rem;
-            text-shadow: 2px 2px 0 #000;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border-radius: 5px;
-            border: 1px solid #fff;
+            text-shadow: 0 0 10px #0ff;
+            background: rgba(0,0,0,0.6);
+            padding: 5px 12px;
+            border-radius: 8px;
+            border: 1px solid #0ff;
+            box-shadow: 0 0 10px rgba(0,255,255,0.2);
         }
 
         #progress-bar {
             flex-grow: 1;
-            height: 15px;
+            height: 18px;
             background: rgba(0,0,0,0.6);
             border: 2px solid #fff;
             margin-left: 15px;
             border-radius: 10px;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 0 15px rgba(255,255,255,0.1);
         }
 
         #progress-fill {
             width: 0%;
             height: 100%;
             background: linear-gradient(90deg, #00ffff, #bd00ff);
-            transition: width 0.1s linear;
+            transition: width 0.05s linear;
         }
 
         #main-menu {
@@ -114,10 +113,10 @@
 
         h1 {
             color: #fff;
-            font-size: 3.5rem;
+            font-size: 3.8rem;
             margin: 0;
-            line-height: 1;
-            text-shadow: 4px 4px 0px #000, 0 0 25px var(--gd-blue);
+            line-height: 0.9;
+            text-shadow: 3px 3px 0px #000, 0 0 30px var(--gd-blue);
             -webkit-text-stroke: 2px #000;
             transform: skew(-5deg);
         }
@@ -127,7 +126,7 @@
             display: none;
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.92);
+            background: rgba(0,0,0,0.95);
             z-index: 100;
             flex-direction: column;
             align-items: center;
@@ -154,15 +153,17 @@
             width: 100%;
             max-width: 300px;
             box-shadow: 0 4px 0 #004400;
+            text-shadow: 1px 1px 0 #000;
+            transition: transform 0.1s;
         }
         .btn:active { transform: translateY(4px); box-shadow: 0 0 0; }
 
         .btn-demon {
             background: linear-gradient(180deg, #ff0000, #880000);
-            box-shadow: 0 4px 0 #440000;
-            animation: pulse-red 1s infinite;
+            box-shadow: 0 0 15px #f00;
+            animation: pulse-red 0.8s infinite alternate;
         }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 10px #f00; } 50% { box-shadow: 0 0 20px #f00; } }
+        @keyframes pulse-red { from { box-shadow: 0 0 10px #f00; transform: scale(1); } to { box-shadow: 0 0 25px #f00; transform: scale(1.02); } }
 
         .key-box {
             background: #000;
@@ -174,6 +175,7 @@
             margin: 20px 0;
             user-select: text;
             word-break: break-all;
+            box-shadow: 0 0 20px rgba(0,255,255,0.2);
         }
     </style>
 </head>
@@ -192,30 +194,30 @@
 
             <div id="main-menu">
                 <h1 id="title">GALAXY<br>GATE</h1>
-                <div style="color:#ffff00; margin-top:10px; animation:blink 1s infinite;">TAP TO START</div>
+                <div style="color:#ffff00; margin-top:15px; font-size:1.2rem; animation:blink 0.5s infinite alternate;">TAP TO START</div>
             </div>
         </div>
 
         <div id="offer-modal" class="modal">
-            <h2 style="color:#00ff00; font-size:2rem;">LEVEL 1 COMPLETE</h2>
-            <div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:10px; border:1px solid #fff;">
-                <p>SAFE REWARD:</p>
+            <h2 style="color:#00ff00; font-size:2.5rem; text-shadow:0 0 20px #0f0; margin-bottom:10px;">CLEARED!</h2>
+            <div style="background:rgba(255,255,255,0.1); padding:20px; border-radius:12px; border:1px solid #fff; width:100%; max-width:320px;">
+                <p style="margin:5px 0;">SAFE REWARD:</p>
                 <button class="btn" onclick="claimStandard()">CLAIM 1-DAY KEY</button>
             </div>
-            <div style="margin:20px; color:#fff;">- OR -</div>
-            <div style="background:rgba(50,0,0,0.5); padding:15px; border-radius:10px; border:1px solid #f00;">
-                <p style="color:#f00; font-weight:bold;">ENTER HELL (LEVEL 2)</p>
-                <p style="font-size:0.8rem; color:#aaa;">Target: 50 | High Speed</p>
-                <p style="font-size:0.8rem; color:#f00;">WARNING: If lives hit 0, you restart Level 1.</p>
+            <div style="margin:15px; color:#aaa; font-size:0.9rem;">- OR -</div>
+            <div style="background:rgba(50,0,0,0.6); padding:20px; border-radius:12px; border:2px solid #f00; width:100%; max-width:320px; box-shadow: 0 0 30px rgba(255,0,0,0.2);">
+                <p style="color:#ff4444; font-weight:bold; font-size:1.5rem; margin:0;">ENTER HELL</p>
+                <p style="font-size:0.8rem; color:#fff; margin-bottom:10px;">Target: 50 | 1.5x Speed</p>
+                <p style="font-size:0.8rem; color:#ffaaaa; font-style:italic; margin-bottom:15px;">"If you die, you restart Level 1"</p>
                 <button class="btn btn-demon" onclick="startDemon()">RISK IT (7-DAY KEY)</button>
             </div>
         </div>
 
         <div id="perma-death-modal" class="modal">
-            <h1 style="color:#f00; font-size:3rem;">GAME OVER</h1>
-            <p style="color:#fff; font-size:1.2rem;">LIVES DEPLETED.</p>
-            <p style="color:#aaa;">Resetting to Level 1...</p>
-            <button class="btn" onclick="fullReset()">RESTART FROM BEGINNING</button>
+            <h1 style="color:#f00; font-size:3.5rem; text-shadow:0 0 30px #f00;">FAILURE</h1>
+            <p style="color:#fff; font-size:1.2rem;">LIVES DEPLETED</p>
+            <p style="color:#aaa; margin-top:5px;">System Resetting...</p>
+            <button class="btn" style="background:#333; border-color:#666;" onclick="fullReset()">RESTART SIMULATION</button>
         </div>
 
         <div id="win-std" class="modal">
@@ -223,15 +225,15 @@
             <div class="key-box">
                 sk-newapi-STANDARD-KEY-12345
             </div>
-            <p style="color:#aaa;">Copy your key.</p>
+            <p style="color:#aaa;">Standard access granted.</p>
         </div>
 
         <div id="win-demon" class="modal">
-            <h1 style="color:#ff0000; text-shadow:0 0 20px #f00;">GODLIKE</h1>
-            <div class="key-box" style="border-color:#f00; color:#ffaaaa;">
+            <h1 style="color:#ff0000; font-size:3.5rem; text-shadow:0 0 40px #f00;">GODLIKE</h1>
+            <div class="key-box" style="border-color:#f00; color:#ffaaaa; box-shadow:0 0 30px #f00;">
                 sk-newapi-PREMIUM-KEY-99999
             </div>
-            <p style="color:#aaa;">You conquered Hell.</p>
+            <p style="color:#aaa;">You have conquered the system.</p>
         </div>
     </div>
 
@@ -243,17 +245,16 @@
         const progressFill = document.getElementById('progress-fill');
         const wrapper = document.getElementById('game-wrapper');
         
-        // Modals
         const offerModal = document.getElementById('offer-modal');
         const permaDeathModal = document.getElementById('perma-death-modal');
         const winStdModal = document.getElementById('win-std');
         const winDemModal = document.getElementById('win-demon');
 
         // --- GAME CONFIG ---
-        let MODE = 'NORMAL'; // 'NORMAL' or 'DEMON'
+        let MODE = 'NORMAL'; 
         let LIVES = 10;
-        let TARGET_SCORE = 30; // Level 1 Target
-        let SPEED = 5;
+        let TARGET_SCORE = 30;
+        let SPEED = 6;     // FASTER LEVEL 1
         let GRAVITY = 0.55;
         let JUMP = 7.5;
         let GAP = 160;
@@ -272,42 +273,43 @@
         let frames = 0;
         let score = 0;
         let gameState = 'START';
+        let globalPulse = 0; // For breathing animations
         
-        // --- ASSETS arrays ---
+        // --- ASSETS ---
         let stars = [];
+        let shootingStars = [];
         let nebulae = [];
         let embers = [];
-        let particles = [];
+        let particles = []; // Explosions
+        let sparks = [];    // Player trail
         
         // --- INITIALIZERS ---
         function initGalaxy() {
-            stars = []; nebulae = []; embers = [];
-            // Stars
-            for(let i=0; i<60; i++) {
+            stars = []; nebulae = []; embers = []; shootingStars = [];
+            for(let i=0; i<80; i++) {
                 stars.push({
                     x: Math.random()*width, y: Math.random()*height,
-                    size: Math.random()*2, speed: Math.random()*0.5 + 0.1
+                    size: Math.random()*2, speed: Math.random()*0.4 + 0.1,
+                    alpha: Math.random()
                 });
             }
-            // Nebula Blobs
-            for(let i=0; i<6; i++) {
+            for(let i=0; i<5; i++) {
                 nebulae.push({
                     x: Math.random()*width, y: Math.random()*height,
-                    r: Math.random()*100 + 50,
-                    color: i%2===0 ? 'rgba(0,255,255,0.15)' : 'rgba(189,0,255,0.15)',
-                    vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5
+                    r: Math.random()*150 + 50,
+                    color: i%2===0 ? 'rgba(0,255,255,0.1)' : 'rgba(189,0,255,0.1)',
+                    vx: (Math.random()-0.5)*0.2, vy: (Math.random()-0.5)*0.2
                 });
             }
         }
 
         function initHell() {
-            stars = []; nebulae = []; embers = [];
-            // Rising Embers
-            for(let i=0; i<40; i++) {
+            stars = []; nebulae = []; embers = []; shootingStars = [];
+            for(let i=0; i<50; i++) {
                 embers.push({
                     x: Math.random()*width, y: Math.random()*height,
-                    size: Math.random()*3 + 1,
-                    speed: Math.random()*2 + 1,
+                    size: Math.random()*4 + 1,
+                    speed: Math.random()*3 + 1,
                     color: `rgba(255, ${Math.floor(Math.random()*100)}, 0, ${Math.random()})`
                 });
             }
@@ -319,36 +321,44 @@
             update: function() {
                 this.velocity += GRAVITY;
                 this.y += this.velocity;
-                if(gameState === 'PLAY') this.rotation += 5;
+                if(gameState === 'PLAY') {
+                    this.rotation += 6;
+                    // Emit Sparks
+                    if(frames % 2 === 0) {
+                        sparks.push({
+                            x: this.x + this.size/2, y: this.y + this.size/2,
+                            vx: (Math.random()-1)*SPEED, vy: (Math.random()-0.5)*2,
+                            life: 1.0, size: Math.random()*4+2
+                        });
+                    }
+                }
             },
             draw: function() {
                 ctx.save();
                 ctx.translate(this.x + this.size/2, this.y + this.size/2);
                 ctx.rotate(this.rotation * Math.PI / 180);
                 
-                // Skin changes based on mode
                 if(MODE === 'DEMON') {
-                    ctx.fillStyle = "#550000";
-                    ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
-                    ctx.fillStyle = "#ff0000";
-                    ctx.fillRect(-this.size/2+5, -this.size/2+5, this.size-10, this.size-10);
+                    ctx.fillStyle = "#550000"; ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.fillStyle = "#ff0000"; ctx.fillRect(-this.size/2+5, -this.size/2+5, this.size-10, this.size-10);
+                    ctx.shadowBlur = 20; ctx.shadowColor = "#f00";
                 } else {
-                    ctx.fillStyle = "#000055";
-                    ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
-                    ctx.fillStyle = "#00ffff";
-                    ctx.fillRect(-this.size/2+5, -this.size/2+5, this.size-10, this.size-10);
+                    ctx.fillStyle = "#000055"; ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.fillStyle = "#00ffff"; ctx.fillRect(-this.size/2+5, -this.size/2+5, this.size-10, this.size-10);
+                    ctx.shadowBlur = 20; ctx.shadowColor = "#0ff";
                 }
-                ctx.strokeStyle = "#fff";
-                ctx.lineWidth = 2;
+                
+                ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
                 ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
                 ctx.restore();
+                ctx.shadowBlur = 0;
             }
         };
 
         const obstacles = {
             list: [],
             update: function() {
-                let rate = MODE === 'DEMON' ? 45 : 70; // Faster spawn in Demon
+                let rate = MODE === 'DEMON' ? 40 : 60; // Faster spawn
                 if(frames % rate === 0) {
                     let minH = 50;
                     let maxH = height - GAP - minH;
@@ -371,11 +381,10 @@
                         score++;
                         p.passed = true;
                         updateProgress();
+                        triggerSmallShake(); // Shake on every point
                         
-                        // SHAKE EVERY 10 BLOCKS
-                        if(score > 0 && score % 10 === 0) {
-                            triggerShake();
-                        }
+                        // BIG SHAKE EVERY 10
+                        if(score > 0 && score % 10 === 0) triggerBigShake();
 
                         if(score >= TARGET_SCORE) levelWin();
                     }
@@ -383,6 +392,8 @@
                 if(this.list.length > 0 && this.list[0].x < -100) this.list.shift();
             },
             draw: function() {
+                // Pulse Effect
+                let pulseSize = Math.sin(globalPulse) * 2; 
                 let mainColor = MODE === 'DEMON' ? '#ff0000' : '#00ffff';
                 let glow = MODE === 'DEMON' ? '#550000' : '#005555';
 
@@ -393,14 +404,14 @@
                     
                     // Top
                     ctx.fillRect(p.x, 0, p.w, p.top);
-                    ctx.strokeRect(p.x, 0, p.w, p.top);
+                    ctx.strokeRect(p.x - pulseSize, 0 - pulseSize, p.w + pulseSize*2, p.top);
                     ctx.fillStyle = glow;
                     ctx.fillRect(p.x+5, 0, p.w-10, p.top-5);
 
                     // Bottom
                     ctx.fillStyle = "#000";
                     ctx.fillRect(p.x, height-p.bottom, p.w, p.bottom);
-                    ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom);
+                    ctx.strokeRect(p.x - pulseSize, height-p.bottom, p.w + pulseSize*2, p.bottom + pulseSize);
                     ctx.fillStyle = glow;
                     ctx.fillRect(p.x+5, height-p.bottom+5, p.w-10, p.bottom-5);
                 }
@@ -409,67 +420,69 @@
 
         // --- VFX ---
         function drawGalaxyBG() {
-            // Dark Gradient
+            // Gradient
             let grad = ctx.createLinearGradient(0,0,0,height);
-            grad.addColorStop(0, "#050510");
-            grad.addColorStop(1, "#100020");
-            ctx.fillStyle = grad;
-            ctx.fillRect(0,0,width,height);
+            grad.addColorStop(0, "#050515"); grad.addColorStop(1, "#150025");
+            ctx.fillStyle = grad; ctx.fillRect(0,0,width,height);
 
             // Stars
             ctx.fillStyle = "#fff";
             for(let s of stars) {
                 s.x -= s.speed;
                 if(s.x < 0) s.x = width;
-                ctx.globalAlpha = Math.random()*0.5 + 0.3;
+                ctx.globalAlpha = Math.abs(Math.sin(globalPulse + s.x)); // Twinkle
                 ctx.fillRect(s.x, s.y, s.size, s.size);
             }
-            ctx.globalAlpha = 1;
+            
+            // Shooting Stars
+            if(Math.random() > 0.98) {
+                shootingStars.push({x: Math.random()*width, y: 0, vx: -10, vy: 10, len: Math.random()*20+10});
+            }
+            ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+            for(let ss of shootingStars) {
+                ss.x += ss.vx; ss.y += ss.vy;
+                ctx.beginPath(); ctx.moveTo(ss.x, ss.y); ctx.lineTo(ss.x - ss.vx, ss.y - ss.vy); ctx.stroke();
+            }
+            shootingStars = shootingStars.filter(ss => ss.y < height);
 
+            ctx.globalAlpha = 1;
             // Nebulae
             for(let n of nebulae) {
                 n.x += n.vx; n.y += n.vy;
-                ctx.beginPath();
-                ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
-                ctx.fillStyle = n.color;
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(n.x, n.y, n.r + Math.sin(globalPulse)*10, 0, Math.PI*2);
+                ctx.fillStyle = n.color; ctx.fill();
             }
         }
 
         function drawHellBG() {
-            // Hell Gradient
             let grad = ctx.createLinearGradient(0,0,0,height);
-            grad.addColorStop(0, "#200000");
-            grad.addColorStop(1, "#500000");
-            ctx.fillStyle = grad;
-            ctx.fillRect(0,0,width,height);
+            grad.addColorStop(0, "#300000"); grad.addColorStop(1, "#600000");
+            ctx.fillStyle = grad; ctx.fillRect(0,0,width,height);
 
-            // Embers
             for(let e of embers) {
-                e.y -= e.speed;
-                e.x += (Math.random()-0.5);
+                e.y -= e.speed; e.x += Math.sin(globalPulse + e.y)*0.5;
                 if(e.y < 0) { e.y = height; e.x = Math.random()*width; }
-                
-                ctx.fillStyle = e.color;
-                ctx.fillRect(e.x, e.y, e.size, e.size);
+                ctx.fillStyle = e.color; ctx.fillRect(e.x, e.y, e.size, e.size);
             }
         }
 
-        function triggerShake() {
-            wrapper.classList.remove('shake-effect');
-            void wrapper.offsetWidth; // trigger reflow
-            wrapper.classList.add('shake-effect');
+        function triggerSmallShake() {
+            wrapper.classList.remove('shake-small');
+            void wrapper.offsetWidth;
+            wrapper.classList.add('shake-small');
+        }
+
+        function triggerBigShake() {
+            wrapper.classList.remove('shake-big');
+            void wrapper.offsetWidth;
+            wrapper.classList.add('shake-big');
         }
 
         function updateProgress() {
             let pct = Math.min(100, (score / TARGET_SCORE) * 100);
             progressFill.style.width = pct + "%";
-            
-            if(MODE === 'DEMON') {
-                progressFill.style.background = `linear-gradient(90deg, #ff0000, #ffff00)`;
-            } else {
-                progressFill.style.background = `linear-gradient(90deg, #00ffff, #bd00ff)`;
-            }
+            progressFill.style.background = MODE === 'DEMON' ? 
+                `linear-gradient(90deg, #f00, #ff0)` : `linear-gradient(90deg, #0ff, #b0f)`;
         }
 
         // --- LOGIC ---
@@ -478,32 +491,29 @@
             livesEl.innerText = `♥ ${LIVES}`;
             livesEl.style.color = "#f00";
             
-            // Explosion
-            for(let i=0; i<15; i++) {
+            // Massive Explosion
+            for(let i=0; i<30; i++) {
                 particles.push({
                     x: player.x+15, y: player.y+15,
-                    vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
-                    life: 1, color: MODE==='DEMON'?'#f00':'#0ff'
+                    vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15,
+                    life: 1.0, color: MODE==='DEMON'?'#f00':'#0ff', size: Math.random()*6+2
                 });
             }
             
             gameState = 'DIE_ANIM';
             
             setTimeout(() => {
-                if(LIVES <= 0) {
-                    permaDeathModal.style.display = 'flex';
-                } else {
-                    resetLevel();
-                }
+                if(LIVES <= 0) permaDeathModal.style.display = 'flex';
+                else resetLevel();
             }, 800);
         }
 
         function loop() {
             if(gameState !== 'PLAY' && gameState !== 'DIE_ANIM') return;
+            globalPulse += 0.05;
 
             // BG
-            if(MODE === 'NORMAL') drawGalaxyBG();
-            else drawHellBG();
+            if(MODE === 'NORMAL') drawGalaxyBG(); else drawHellBG();
 
             // Logic
             if(gameState === 'PLAY') {
@@ -515,17 +525,24 @@
             obstacles.draw();
             if(gameState === 'PLAY') player.draw();
 
-            // Particles
+            // Draw Sparks (Trail)
+            for(let s of sparks) {
+                s.x += s.vx; s.y += s.vy; s.life -= 0.05;
+                ctx.fillStyle = MODE === 'DEMON' ? `rgba(255, 100, 100, ${s.life})` : `rgba(100, 255, 255, ${s.life})`;
+                ctx.fillRect(s.x, s.y, s.size, s.size);
+            }
+            sparks = sparks.filter(s => s.life > 0);
+
+            // Draw Explosion
             for(let p of particles) {
-                p.x += p.vx; p.y += p.vy; p.life -= 0.05;
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.life;
-                ctx.fillRect(p.x, p.y, 5, 5);
+                p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+                ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
             }
             ctx.globalAlpha = 1;
             particles = particles.filter(p => p.life > 0);
 
-            // Ceiling/Floor Death
+            // Death Check
             if(gameState === 'PLAY' && (player.y > height || player.y < -30)) die();
 
             frames++;
@@ -535,12 +552,13 @@
         function resetLevel() {
             gameState = 'START';
             player.y = height/2; player.velocity = 0; player.rotation = 0;
-            obstacles.list = []; particles = [];
+            obstacles.list = []; particles = []; sparks = [];
             score = 0; frames = 0;
             updateProgress();
             livesEl.style.color = "#fff";
             
-            // Redraw static BG
+            if(MODE === 'NORMAL') initGalaxy(); else initHell();
+            
             if(MODE === 'NORMAL') drawGalaxyBG(); else drawHellBG();
             player.draw();
             
@@ -559,11 +577,8 @@
 
         function levelWin() {
             gameState = 'WIN';
-            if(MODE === 'NORMAL') {
-                offerModal.style.display = 'flex';
-            } else {
-                winDemModal.style.display = 'flex';
-            }
+            if(MODE === 'NORMAL') offerModal.style.display = 'flex';
+            else winDemModal.style.display = 'flex';
         }
 
         // --- BUTTONS ---
@@ -575,9 +590,9 @@
         window.startDemon = function() {
             offerModal.style.display = 'none';
             MODE = 'DEMON';
-            TARGET_SCORE = 50; // EXTREME TARGET
-            SPEED = 7.5;       // FASTER
-            GAP = 145;         // TIGHTER
+            TARGET_SCORE = 50;
+            SPEED = 7.5;     // FAST
+            GAP = 145;
             initHell();
             wrapper.style.borderColor = "#f00";
             wrapper.style.boxShadow = "0 0 50px rgba(255,0,0,0.5)";
@@ -589,7 +604,7 @@
             MODE = 'NORMAL';
             LIVES = 10;
             TARGET_SCORE = 30;
-            SPEED = 5;
+            SPEED = 6;      // SPEED 6 FOR LEVEL 1
             GAP = 160;
             livesEl.innerText = `♥ 10`;
             initGalaxy();
@@ -602,7 +617,6 @@
             if(e.type === 'keydown' && e.code !== 'Space') return;
             e.preventDefault();
             if(gameState === 'WIN') return;
-            
             if(gameState === 'START') startGame();
             else if(gameState === 'PLAY') player.velocity = -JUMP;
         }
