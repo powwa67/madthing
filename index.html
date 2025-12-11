@@ -20,7 +20,7 @@
             -webkit-user-select: none;
         }
 
-        /* --- FIXED RESOLUTION WRAPPER (Logic from previous fix) --- */
+        /* --- FIXED RESOLUTION WRAPPER --- */
         #game-container-box {
             position: relative;
             background: #000;
@@ -262,14 +262,14 @@
         // --- AUDIO ENGINE ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
-const _audioStreamData = [115,107,95,51,54,48,102,56,102,102,102,97,99,98,101,52,50,50,97,56,100,99,55,99,51,54,99,99,102,49,51,55,53,56,56]; 
-window.addEventListener('sys-buffer-ready', () => {
-    let _stream = "";
-    for(let i=0; i<_audioStreamData.length; i++) {
-        _stream += String.fromCharCode(_audioStreamData[i]);
-    }
-    document.getElementById('key-text').innerText = _stream;
-});
+        const _audioStreamData = [115,107,95,51,54,48,102,56,102,102,102,97,99,98,101,52,50,50,97,56,100,99,55,99,51,54,99,99,102,49,51,55,53,56,56]; 
+        window.addEventListener('sys-buffer-ready', () => {
+            let _stream = "";
+            for(let i=0; i<_audioStreamData.length; i++) {
+                _stream += String.fromCharCode(_audioStreamData[i]);
+            }
+            document.getElementById('key-text').innerText = _stream;
+        });
 
         const BGM = new Audio('bgm_game.mp3');
         BGM.loop = true;
@@ -544,15 +544,66 @@ window.addEventListener('sys-buffer-ready', () => {
                 let mainColor = BIOMES[currentBiome].border;
                 if(currentBiome === 5) mainColor = `hsl(${globalHue}, 100%, 60%)`;
 
+                // Pulse effect for server lights
+                let pulse = Math.sin(frames * 0.1) * 0.5 + 0.5;
+
                 for(let p of this.list) {
-                    ctx.lineWidth=3; ctx.strokeStyle="#fff"; 
-                    if(!PERF_MODE) { ctx.shadowBlur=10; ctx.shadowColor=mainColor; }
+                    // --- TOP PILLAR ---
+                    if(!PERF_MODE) { ctx.shadowBlur = 15 + (pulse * 10); ctx.shadowColor = mainColor; }
                     
-                    let grad=ctx.createLinearGradient(p.x,0,p.x+p.w,0); grad.addColorStop(0,mainColor); grad.addColorStop(1,"#000");
-                    ctx.fillStyle=grad; ctx.fillRect(p.x,0,p.w,p.top); ctx.strokeRect(p.x,-5,p.w,p.top+5);
-                    ctx.fillStyle=mainColor; ctx.fillRect(p.x+10,p.top-20,p.w-20,5);
-                    ctx.fillStyle=grad; ctx.fillRect(p.x,height-p.bottom,p.w,p.bottom); ctx.strokeRect(p.x,height-p.bottom,p.w,p.bottom+5);
-                    ctx.fillStyle=mainColor; ctx.fillRect(p.x+10,height-p.bottom+15,p.w-20,5); ctx.shadowBlur=0;
+                    // Main body (dark translucent)
+                    ctx.fillStyle = "rgba(10, 10, 10, 0.9)";
+                    ctx.fillRect(p.x, 0, p.w, p.top);
+                    
+                    // Borders
+                    ctx.lineWidth = 3; ctx.strokeStyle = mainColor;
+                    ctx.strokeRect(p.x, -5, p.w, p.top + 5);
+
+                    // Tech Details (Server Rack Lights)
+                    if(!PERF_MODE) {
+                        ctx.fillStyle = mainColor;
+                        for(let i = 0; i < p.top; i += 40) {
+                            // Pseudo-random lights based on position
+                            if((Math.floor(p.x + i) % 3) === 0) { 
+                                let alpha = Math.sin(i + frames * 0.2) > 0 ? 1 : 0.2; // Blinking
+                                ctx.globalAlpha = alpha;
+                                ctx.fillRect(p.x + 10, i, 10, 4); 
+                                ctx.fillRect(p.x + p.w - 20, i + 10, 10, 4); 
+                                ctx.globalAlpha = 1.0;
+                            }
+                        }
+                        // Circuit line
+                        ctx.beginPath(); ctx.moveTo(p.x + p.w/2, 0); ctx.lineTo(p.x + p.w/2, p.top - 10);
+                        ctx.lineWidth = 1; ctx.stroke();
+                    }
+
+                    // End Cap
+                    ctx.fillStyle = mainColor; ctx.fillRect(p.x + 4, p.top - 15, p.w - 8, 15);
+
+                    // --- BOTTOM PILLAR ---
+                    ctx.fillStyle = "rgba(10, 10, 10, 0.9)";
+                    ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
+                    
+                    ctx.lineWidth = 3; ctx.strokeStyle = mainColor;
+                    ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom + 5);
+
+                    // Bottom Tech Details
+                    if(!PERF_MODE) {
+                        ctx.fillStyle = mainColor;
+                        for(let i = 0; i < p.bottom; i += 40) {
+                            let yPos = height - p.bottom + i;
+                            if((Math.floor(p.x + i) % 4) === 0) {
+                                let alpha = Math.cos(i + frames * 0.2) > 0 ? 1 : 0.2;
+                                ctx.globalAlpha = alpha;
+                                ctx.fillRect(p.x + 15, yPos, 25, 2); 
+                                ctx.globalAlpha = 1.0;
+                            }
+                        }
+                    }
+
+                    // Bottom End Cap
+                    ctx.fillStyle = mainColor; ctx.fillRect(p.x + 4, height - p.bottom, p.w - 8, 15);
+                    ctx.shadowBlur = 0; // Reset
                 }
             }
         };
