@@ -55,7 +55,7 @@
 
         #top-bar {
             display: flex; align-items: center; padding: 20px; width: 100%; box-sizing: border-box;
-            justify-content: center; /* Center content */
+            justify-content: center;
         }
 
         #progress-container { flex-grow: 1; display: flex; flex-direction: column; }
@@ -71,9 +71,8 @@
             transition: width 0.1s linear; box-shadow: 0 0 20px #fff;
         }
         
-        /* NEW: Score Counter Style */
         #score-counter {
-            display: none; /* Hidden by default */
+            display: none; 
             font-size: 3rem;
             color: #fff;
             text-shadow: 0 0 20px #00ffff, 4px 4px 0 #000;
@@ -90,6 +89,14 @@
             color: #fff; font-size: 3.5rem; margin: 0; line-height: 0.95;
             text-shadow: 4px 4px 0px #000, 0 0 40px #00ffff;
             -webkit-text-stroke: 2px #000; transform: skew(-5deg); letter-spacing: -2px;
+        }
+        
+        .high-score-label {
+            color: #bd00ff;
+            font-size: 1.2rem;
+            margin-top: 10px;
+            text-shadow: 0 0 10px #bd00ff;
+            letter-spacing: 1px;
         }
         
         #perf-btn {
@@ -197,6 +204,7 @@
 
             <div id="main-menu">
                 <h1 id="title" class="glitch-anim">POWA<br>PROXY</h1>
+                <div id="menu-high-score" class="high-score-label">BEST: 0</div>
                 <div style="color:#ffff00; margin-top:15px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
             </div>
@@ -204,7 +212,10 @@
 
         <div id="death-modal" class="modal">
             <h1 style="color:#f00; font-size:3rem; text-shadow:0 0 30px #f00; margin-bottom: 0;">BRUH</h1>
-            <p style="color:#fff; font-size:1rem; margin-top:10px; max-width: 80%;">just go back to jllm atp fam</p>
+            <div id="death-score-display" style="color:#fff; font-size:1.5rem; margin: 10px 0;">SCORE: 0</div>
+            <div id="death-best-display" style="color:#bd00ff; font-size:1.2rem; text-shadow:0 0 10px #bd00ff;">BEST: 0</div>
+            
+            <p style="color:#aaa; font-size:0.9rem; margin-top:10px; max-width: 80%;">just go back to jllm atp fam</p>
             <div style="width: 200px; height: 4px; background: #333; margin: 20px 0;"></div>
             <button class="btn" style="background: linear-gradient(180deg, #555, #222); border-color:#888;" onclick="resetLevel()">TRY AGAIN</button>
         </div>
@@ -215,7 +226,6 @@
                 <div class="key-label">DAILY API KEY</div>
                 <div id="key-text" class="key-box">Loading...</div>
                 <button class="btn btn-copy" onclick="copyKey('key-text', this)">COPY KEY</button>
-                
                 <button class="btn btn-continue" onclick="continueGame()">CONTINUE PLAYING</button>
             </div>
         </div>
@@ -234,6 +244,9 @@
         
         const deathModal = document.getElementById('death-modal');
         const winModal = document.getElementById('win-modal');
+        const menuHighScore = document.getElementById('menu-high-score');
+        const deathScoreDisplay = document.getElementById('death-score-display');
+        const deathBestDisplay = document.getElementById('death-best-display');
         
         const bgFail = document.getElementById('bg-fail');
         const bgWin = document.getElementById('bg-win');
@@ -261,7 +274,7 @@
         resize();
 
         // --- GAME CONFIG ---
-        let TARGET_SCORE = 3; 
+        let TARGET_SCORE = 3; // CHANGE THIS to 30 for release, or lower for testing
         let SPEED = 6.5;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
@@ -279,7 +292,12 @@
         ];
 
         let currentBiome = 0;
-        let infiniteMode = false; // NEW FLAG
+        let infiniteMode = false;
+        let isUnlocked = false; // Tracks if the player has unlocked infinite mode this session
+        
+        // --- HIGH SCORE LOGIC ---
+        let highScore = localStorage.getItem('powa-high-score') || 0;
+        menuHighScore.innerText = `BEST: ${highScore}`;
 
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
@@ -727,11 +745,23 @@
     
         // --- CORE FUNCTIONS ---
         function die() {
+            // HIGH SCORE CHECK
+            if(score > highScore) {
+                highScore = score;
+                localStorage.setItem('powa-high-score', highScore);
+                menuHighScore.innerText = `BEST: ${highScore}`;
+            }
+
             flashScreen(); SFX.explode();
             if(!PERF_MODE) {
                 for(let i=0; i<25; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1.0, color: '#0ff', size: Math.random()*8+3});
             }
             gameState = 'DIE_ANIM';
+            
+            // UPDATE DEATH MODAL TEXT
+            deathScoreDisplay.innerText = `SCORE: ${score}`;
+            deathBestDisplay.innerText = `BEST: ${highScore}`;
+
             bgFail.style.display = 'block';
             setTimeout(() => { bgFail.style.opacity = '1'; }, 10);
             setTimeout(() => { deathModal.style.display = 'flex'; }, 800);
@@ -748,9 +778,10 @@
             window.dispatchEvent(new Event('sys-buffer-ready'));
         }
 
-        // --- NEW CONTINUE FUNCTION ---
         window.continueGame = function() {
             infiniteMode = true;
+            isUnlocked = true; // Mark as unlocked for this session
+            
             winModal.style.display = 'none';
             bgWin.style.opacity = '0';
             setTimeout(() => { bgWin.style.display = 'none'; }, 500);
@@ -773,15 +804,24 @@
             gameState = 'START';
             score = 0; frames = 0;
             currentBiome = 0; 
-            infiniteMode = false; // Reset mode
-
-            // UI RESET: Show Progress, Hide Score
-            progressContainer.style.display = 'flex';
-            scoreCounter.style.display = 'none';
+            
+            // SMART RESET LOGIC
+            if (isUnlocked) {
+                // If previously unlocked, stay in infinite mode
+                infiniteMode = true;
+                progressContainer.style.display = 'none';
+                scoreCounter.style.display = 'block';
+                scoreCounter.innerText = "0";
+            } else {
+                // If not unlocked, go back to standard mode
+                infiniteMode = false;
+                progressContainer.style.display = 'flex';
+                scoreCounter.style.display = 'none';
+                updateProgress();
+            }
 
             wrapper.style.borderColor = "#fff";
             wrapper.style.boxShadow = "0 0 60px rgba(0,255,255,0.3)";
-            updateProgress();
             
             player.y = height/2; player.velocity = 0; player.rotation = 0;
             obstacles.list = []; trail = []; shockwaves = []; floatTexts = [];
@@ -882,4 +922,3 @@
     </script>
 </body>
 </html>
-
