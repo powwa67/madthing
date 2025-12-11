@@ -497,7 +497,7 @@
         const obstacles = {
             list: [],
             
-            // --- "ANOMALY" UPDATE LOGIC (TUNED) ---
+            // --- "ANOMALY" UPDATE LOGIC (AGGRESSIVE) ---
             update: function() {
                 // SPAWN LOGIC
                 if(frames % 55 === 0) {
@@ -520,12 +520,12 @@
                     if(topH < minH) topH = minH + (Math.random() * 30);
                     if(topH > maxH) topH = maxH - (Math.random() * 30);
                     
-                    // --- THE SURPRISE ELEMENT (TUNED) ---
-                    // Spawn Rate: Reduced to 15% (Rare enough to be special)
-                    let isAnomaly = Math.random() < 0.15;
+                    // --- THE SURPRISE ELEMENT (UPDATED) ---
+                    // Spawn Rate: 30%
+                    let isAnomaly = Math.random() < 0.3;
                     
-                    // Anomaly Speed: Reduced to 0.5 - 1.5 px/frame (Gentle floating)
-                    let speedVal = Math.random() * 1.0 + 0.5; 
+                    // Anomaly Speed: 1.0 to 3.0 px/frame (Faster movement)
+                    let speedVal = Math.random() * 2.0 + 1.0; 
                     let anomalyDir = Math.random() < 0.5 ? 1 : -1;
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
 
@@ -553,7 +553,7 @@
                     p.top += p.moveY; 
                     if(p.top < 30 || p.top > height - GAP - 30) p.moveY *= -1;
 
-                    // 2. ANOMALY MOVEMENT (Smoother)
+                    // 2. ANOMALY MOVEMENT (Faster)
                     if(p.isAnomaly) {
                         p.top += p.anomalySpeed;
                         p.bottom -= p.anomalySpeed; 
@@ -618,6 +618,7 @@
                             ctx.lineWidth = 3; ctx.strokeStyle = activeColor; 
                             ctx.strokeRect(p.x, yRect - (i===0?5:0), p.w, h + 5);
                             
+                            // Tech Lights
                             if(!PERF_MODE) {
                                 ctx.fillStyle = activeColor;
                                 for(let k = 0; k < h; k += 40) {
@@ -631,6 +632,7 @@
                                 }
                             }
                         });
+                        // End Caps
                         ctx.fillStyle = activeColor; 
                         ctx.fillRect(p.x + 4, p.top - 15, p.w - 8, 15); 
                         ctx.fillRect(p.x + 4, height - p.bottom, p.w - 8, 15); 
@@ -824,6 +826,7 @@
     </script>
 </body>
 </html>
+
 
 
 
