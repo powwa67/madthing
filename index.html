@@ -225,13 +225,20 @@
         let SPEED = 6.5;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
-        let GAP = 165; 
+        let GAP = 175;  // FIXED: Slightly wider (165 -> 175)
         let PERF_MODE = false;
 
+        // FIXED: Enforce internal resolution to prevent landscape exploit
+        const LOGICAL_WIDTH = 480;
+        const LOGICAL_HEIGHT = 854;
+
         let width, height;
+        
         function resize() {
-            width = wrapper.clientWidth;
-            height = wrapper.clientHeight;
+            // We set the canvas to a fixed internal resolution.
+            // CSS handles the visual scaling.
+            width = LOGICAL_WIDTH;
+            height = LOGICAL_HEIGHT;
             canvas.width = width;
             canvas.height = height;
         }
@@ -683,9 +690,3 @@ window.addEventListener('sys-buffer-ready', () => {
     </script>
 </body>
 </html>
-
-
-
-
-
-
