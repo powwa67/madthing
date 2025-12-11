@@ -803,10 +803,10 @@
             window.dispatchEvent(new Event('sys-buffer-ready'));
         }
 
-        window.continueGame = function() {
+       window.continueGame = function() {
             infiniteMode = true;
             isUnlocked = true; 
-            localStorage.setItem('powa-unlocked', 'true'); // Ensure it's saved
+            localStorage.setItem('powa-unlocked', 'true');
             
             winModal.style.display = 'none';
             bgWin.style.opacity = '0';
@@ -820,10 +820,15 @@
             wrapper.style.borderColor = "#fff";
             wrapper.style.boxShadow = "0 0 60px rgba(0,255,255,0.3)";
             
-            // UI SWITCH: Hide Progress, Show Score
+            // UI SWITCH
             progressContainer.style.display = 'none';
             scoreCounter.style.display = 'block';
             scoreCounter.innerText = score;
+
+            // --- THE FIX IS HERE ---
+            // We force the player to jump immediately so they don't fall
+            player.velocity = -JUMP; 
+            // -----------------------
 
             gameState = 'PLAY';
             MUSIC.resume();
@@ -956,4 +961,5 @@
     </script>
 </body>
 </html>
+
 
