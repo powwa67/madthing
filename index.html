@@ -540,9 +540,8 @@
                 }
                 if(this.list.length > 0 && this.list[0].x < -100) this.list.shift();
             },
-           draw: function() {
-                // Determine the "Era" based on score
-                // 0 = Server Racks, 1 = Wireframe/Glitch, 2 = Heavy Armor
+          draw: function() {
+                // Era 0 = Server Racks, Era 1 = Wireframe, Era 2 = Quantum Scanner
                 let era = Math.floor(score / 10) % 3; 
 
                 let mainColor = BIOMES[currentBiome].border;
@@ -556,20 +555,16 @@
                     if (era === 0) {
                         if(!PERF_MODE) { ctx.shadowBlur = 15 + (pulse * 10); ctx.shadowColor = mainColor; }
                         
-                        // Top & Bottom Logic shared to keep code dry-ish
                         [p.top, height - p.bottom].forEach((yStart, i) => {
                             let h = (i===0) ? p.top : p.bottom;
                             let yRect = (i===0) ? 0 : height - p.bottom;
                             
-                            // Fill
                             ctx.fillStyle = "rgba(10, 10, 10, 0.9)";
                             ctx.fillRect(p.x, yRect, p.w, h);
                             
-                            // Stroke
                             ctx.lineWidth = 3; ctx.strokeStyle = mainColor;
                             ctx.strokeRect(p.x, yRect - (i===0?5:0), p.w, h + 5);
 
-                            // Lights
                             if(!PERF_MODE) {
                                 ctx.fillStyle = mainColor;
                                 for(let k = 0; k < h; k += 40) {
@@ -583,13 +578,13 @@
                                 }
                             }
                         });
-                        // End Caps
+                        
                         ctx.fillStyle = mainColor; 
-                        ctx.fillRect(p.x + 4, p.top - 15, p.w - 8, 15); // Top Cap
-                        ctx.fillRect(p.x + 4, height - p.bottom, p.w - 8, 15); // Bot Cap
+                        ctx.fillRect(p.x + 4, p.top - 15, p.w - 8, 15); 
+                        ctx.fillRect(p.x + 4, height - p.bottom, p.w - 8, 15); 
                     }
 
-                    // --- STYLE 2: UNSTABLE SECTOR (Wireframe/Glitch) ---
+                    // --- STYLE 2: UNSTABLE SECTOR (Wireframe) ---
                     else if (era === 1) {
                         if(!PERF_MODE) { ctx.shadowBlur = 5; ctx.shadowColor = "#fff"; }
                         
@@ -597,21 +592,17 @@
                         ctx.strokeStyle = mainColor;
                         ctx.lineWidth = 2;
                         
-                        // Dashed lines to look like raw data
                         ctx.setLineDash([10, 5]); 
-                        ctx.lineDashOffset = -frames * 2; // Moving edges
+                        ctx.lineDashOffset = -frames * 2; 
 
-                        // Top Pipe
                         ctx.strokeRect(p.x, -5, p.w, p.top + 5);
-                        // Bottom Pipe
                         ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom + 5);
                         
-                        ctx.setLineDash([]); // Reset for interior
+                        ctx.setLineDash([]); 
                         
-                        // "Static" noise inside
                         if(!PERF_MODE) {
                             ctx.fillStyle = mainColor;
-                            for(let k=0; k<10; k++) {
+                            for(let k=0; k<8; k++) { 
                                 let rx = p.x + Math.random()*p.w;
                                 let ry = Math.random() * height;
                                 if(ry < p.top || ry > height - p.bottom) {
@@ -622,41 +613,54 @@
                         ctx.restore();
                     }
 
-                    // --- STYLE 3: ARMORED CORE (Hazard Stripes) ---
+                    // --- STYLE 3: QUANTUM SCANNER (New Futuristic Vibe) ---
                     else if (era === 2) {
-                        if(!PERF_MODE) { ctx.shadowBlur = 20; ctx.shadowColor = mainColor; }
+                        if(!PERF_MODE) { ctx.shadowBlur = 25; ctx.shadowColor = mainColor; }
+
+                        // 1. Sleek Dark Glass Body
+                        ctx.fillStyle = "rgba(0, 5, 10, 0.95)";
+                        ctx.fillRect(p.x, 0, p.w, p.top);
+                        ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
 
                         ctx.save();
-                        // Create a clipping region for the stripes so they don't draw outside pipes
-                        ctx.beginPath();
-                        ctx.rect(p.x, 0, p.w, p.top);
-                        ctx.rect(p.x, height - p.bottom, p.w, p.bottom);
-                        ctx.clip();
-
-                        // Background
-                        ctx.fillStyle = "#000";
-                        ctx.fill();
-
-                        // Draw Stripes
+                        
+                        // 2. Vertical "Energy Rails"
                         ctx.strokeStyle = mainColor;
-                        ctx.lineWidth = 5;
-                        let offset = (frames * 2) % 40;
-                        for(let y = -40; y < height; y+=30) {
-                            ctx.beginPath();
-                            ctx.moveTo(p.x - 10, y + offset);
-                            ctx.lineTo(p.x + p.w + 10, y + offset + 30);
-                            ctx.stroke();
-                        }
+                        ctx.lineWidth = 3;
+                        ctx.shadowBlur = 10; 
+                        ctx.shadowColor = "#fff"; // Inner white glow
+                        
+                        ctx.beginPath();
+                        // Top Rails (Left & Right)
+                        ctx.moveTo(p.x + 12, 0); ctx.lineTo(p.x + 12, p.top);
+                        ctx.moveTo(p.x + p.w - 12, 0); ctx.lineTo(p.x + p.w - 12, p.top);
+                        // Bottom Rails
+                        ctx.moveTo(p.x + 12, height - p.bottom); ctx.lineTo(p.x + 12, height);
+                        ctx.moveTo(p.x + p.w - 12, height - p.bottom); ctx.lineTo(p.x + p.w - 12, height);
+                        ctx.stroke();
+
+                        // 3. The "Laser Scan" (Moving Bar)
+                        let scanPos = (Math.sin(frames * 0.05) + 1) * 0.5; // Oscillates 0.0 to 1.0
+                        ctx.fillStyle = "#fff";
+                        ctx.shadowBlur = 20;
+
+                        // Top Scanner
+                        ctx.fillRect(p.x, scanPos * p.top, p.w, 4);
+                        
+                        // Bottom Scanner
+                        let botY = (height - p.bottom) + (scanPos * p.bottom);
+                        ctx.fillRect(p.x, botY, p.w, 4);
+
                         ctx.restore();
 
-                        // Solid thick borders
-                        ctx.lineWidth = 4;
-                        ctx.strokeStyle = "#fff";
+                        // 4. Clean Outer Border
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = mainColor;
                         ctx.strokeRect(p.x, -2, p.w, p.top+2);
                         ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom+2);
                     }
                     
-                    ctx.shadowBlur = 0; // Reset
+                    ctx.shadowBlur = 0; 
                 }
             }
         };
@@ -796,5 +800,6 @@
     </script>
 </body>
 </html>
+
 
 
