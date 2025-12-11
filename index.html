@@ -497,7 +497,7 @@
         const obstacles = {
             list: [],
             
-            // --- "ANOMALY" UPDATE LOGIC ---
+            // --- "ANOMALY" UPDATE LOGIC (TUNED) ---
             update: function() {
                 // SPAWN LOGIC
                 if(frames % 55 === 0) {
@@ -520,13 +520,14 @@
                     if(topH < minH) topH = minH + (Math.random() * 30);
                     if(topH > maxH) topH = maxH - (Math.random() * 30);
                     
-                    // --- THE SURPRISE ELEMENT ---
-                    // 30% Chance to spawn a "Moving Target" (Anomaly)
-                    let isAnomaly = Math.random() < 0.3;
+                    // --- THE SURPRISE ELEMENT (TUNED) ---
+                    // Spawn Rate: Reduced to 15% (Rare enough to be special)
+                    let isAnomaly = Math.random() < 0.15;
                     
-                    // Anomaly speed: Randomly slow or fast vertical movement
-                    let anomalySpeed = isAnomaly ? (Math.random() * 3 + 2) : 0; 
+                    // Anomaly Speed: Reduced to 0.5 - 1.5 px/frame (Gentle floating)
+                    let speedVal = Math.random() * 1.0 + 0.5; 
                     let anomalyDir = Math.random() < 0.5 ? 1 : -1;
+                    let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
 
                     // -----------------------
 
@@ -538,9 +539,9 @@
                         bottom: height-GAP-topH, 
                         passed: false, 
                         moveY: moveY,
-                        isAnomaly: isAnomaly,     // Is this a trap?
-                        anomalySpeed: anomalySpeed * anomalyDir, // How fast it moves
-                        anomalyOffset: 0          // Tracker
+                        isAnomaly: isAnomaly,     
+                        anomalySpeed: anomalySpeed, 
+                        anomalyOffset: 0          
                     });
                 }
 
@@ -552,13 +553,12 @@
                     p.top += p.moveY; 
                     if(p.top < 30 || p.top > height - GAP - 30) p.moveY *= -1;
 
-                    // 2. ANOMALY MOVEMENT (The Surprise)
-                    // If this is an anomaly, the gap SLIDES up and down while moving left.
+                    // 2. ANOMALY MOVEMENT (Smoother)
                     if(p.isAnomaly) {
                         p.top += p.anomalySpeed;
-                        p.bottom -= p.anomalySpeed; // Keep gap size constant, just shift position
+                        p.bottom -= p.anomalySpeed; 
                         
-                        // Bounce the anomaly if it hits roof/floor
+                        // Bounce smoothly if near edges
                         if(p.top < 40 || p.top > height - GAP - 40) {
                             p.anomalySpeed *= -1;
                         }
@@ -577,9 +577,9 @@
                         switchBiome();
                         if(!PERF_MODE) shockwaves.push({x: player.x, y: player.y, r: 10, alpha: 1});
                         
-                        // Bonus text for surviving an anomaly
+                        // Special text for anomalies
                         if(p.isAnomaly && !PERF_MODE) {
-                            floatTexts.push({text: "DODGED!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
+                            floatTexts.push({text: "ANOMALY!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
                         }
                         else if(Math.random() > 0.6 && !PERF_MODE) {
                              const words = ["POW", "GOOD", "NICE", "EZ", "WOAH"];
@@ -601,9 +601,8 @@
 
                 for(let p of this.list) {
                     
-                    // VISUAL WARNING FOR ANOMALIES
-                    // If it moves, give it a scary "Red Alert" tint overlay
-                    let warningColor = p.isAnomaly && (frames % 10 < 5) ? "#ff0000" : mainColor;
+                    // Visual Warning: Anomalies pulse RED occasionally
+                    let warningColor = p.isAnomaly && (frames % 20 < 10) ? "#ff0000" : mainColor;
                     let activeColor = p.isAnomaly ? warningColor : mainColor;
 
                     // ERA 0: SERVER RACKS
@@ -619,7 +618,6 @@
                             ctx.lineWidth = 3; ctx.strokeStyle = activeColor; 
                             ctx.strokeRect(p.x, yRect - (i===0?5:0), p.w, h + 5);
                             
-                            // Tech Lights
                             if(!PERF_MODE) {
                                 ctx.fillStyle = activeColor;
                                 for(let k = 0; k < h; k += 40) {
@@ -633,7 +631,6 @@
                                 }
                             }
                         });
-                        // End Caps
                         ctx.fillStyle = activeColor; 
                         ctx.fillRect(p.x + 4, p.top - 15, p.w - 8, 15); 
                         ctx.fillRect(p.x + 4, height - p.bottom, p.w - 8, 15); 
@@ -827,6 +824,7 @@
     </script>
 </body>
 </html>
+
 
 
 
