@@ -496,41 +496,58 @@
 
         const obstacles = {
             list: [],
+            
+            // --- NEW SMART UPDATE LOGIC ---
             update: function() {
+                // SPAWN LOGIC
                 if(frames % 55 === 0) {
-                    // --- SMART GAP GENERATION ---
-                    // Prevent impossible jumps by limiting max height change relative to last pipe
-                    let minH = 60;
+                    let minH = 60; 
                     let maxH = height - GAP - minH;
                     
                     let prevTop = (this.list.length > 0) ? this.list[this.list.length-1].top : (height - GAP) / 2;
                     
-                    // Max vertical shift per pipe (reachable zone)
-                    // 35% of screen height is roughly the max safe jump distance between pipes
-                    let maxShift = height * 0.35; 
-                    
-                    let randomShift = (Math.random() * maxShift * 2) - maxShift;
-                    let topH = prevTop + randomShift;
+                    // 1. Define movement constraints
+                    let maxShift = 220; 
+                    let minShift = 60; // Forces gap to move at least 60px
 
-                    // Clamp within screen bounds
-                    if(topH < minH) topH = minH;
-                    if(topH > maxH) topH = maxH;
+                    // 2. Decide direction (Bias logic)
+                    let direction = Math.random() < 0.5 ? -1 : 1;
+                    if(prevTop < height * 0.25) direction = 1; // Too high? Go down.
+                    else if(prevTop > height * 0.55) direction = -1; // Too low? Go up.
+
+                    // 3. Calculate shift
+                    let shiftMag = Math.floor(Math.random() * (maxShift - minShift + 1)) + minShift;
+                    let move = shiftMag * direction;
                     
-                    let moveY = (Math.random()-0.5)*1.5;
+                    let topH = prevTop + move;
+
+                    // 4. Safety Clamp
+                    if(topH < minH) topH = minH + (Math.random() * 50);
+                    if(topH > maxH) topH = maxH - (Math.random() * 50);
+                    
+                    let moveY = (Math.random()-0.5)*1.5; 
                     this.list.push({x: width, w: 55, top: topH, bottom: height-GAP-topH, passed: false, moveY: moveY});
                 }
+
+                // MOVEMENT & COLLISION
                 for(let p of this.list) {
                     p.x -= SPEED;
-                    p.top += p.moveY; if(p.top<30 || p.top>height-GAP-30) p.moveY *= -1;
+                    p.top += p.moveY; 
+                    if(p.top < 30 || p.top > height - GAP - 30) p.moveY *= -1;
 
-                    let pad=8; if(player.x+pad < p.x+p.w && player.x+player.size-pad > p.x && (player.y+pad < p.top || player.y+player.size-pad > height-p.bottom)) die();
+                    let pad = 8; 
+                    if(player.x + pad < p.x + p.w && 
+                       player.x + player.size - pad > p.x && 
+                       (player.y + pad < p.top || player.y + player.size - pad > height - p.bottom)) {
+                        die();
+                    }
 
-                    if(p.x+p.w < player.x && !p.passed) {
+                    if(p.x + p.w < player.x && !p.passed) {
                         score++; p.passed = true; updateProgress(); SFX.score(); triggerShake();
                         switchBiome();
                         if(!PERF_MODE) shockwaves.push({x: player.x, y: player.y, r: 10, alpha: 1});
                         
-                        if(Math.random()>0.5 && !PERF_MODE) {
+                        if(Math.random() > 0.5 && !PERF_MODE) {
                             const words = ["POW", "GOOD", "NICE", "EZ", "WOAH"];
                             floatTexts.push({text: words[Math.floor(Math.random()*words.length)], x: player.x, y: player.y-40, life: 1.0, vy: -2});
                         }
@@ -540,31 +557,23 @@
                 }
                 if(this.list.length > 0 && this.list[0].x < -100) this.list.shift();
             },
-         draw: function() {
-                // Era 0 = Server Racks, Era 1 = Data Stream, Era 2 = Quantum Scanner
-                let era = Math.floor(score / 10) % 3; 
 
+            // --- OPTIMIZED DRAW LOGIC (Server -> Data Stream -> Quantum) ---
+            draw: function() {
+                let era = Math.floor(score / 10) % 3; 
                 let mainColor = BIOMES[currentBiome].border;
                 if(currentBiome === 5) mainColor = `hsl(${globalHue}, 100%, 60%)`;
-
                 let pulse = Math.sin(frames * 0.1) * 0.5 + 0.5;
 
                 for(let p of this.list) {
-                    
-                    // --- STYLE 1: THE DATACENTER (Hardware) ---
+                    // ERA 0: SERVER RACKS
                     if (era === 0) {
                         if(!PERF_MODE) { ctx.shadowBlur = 15 + (pulse * 10); ctx.shadowColor = mainColor; }
-                        
                         [p.top, height - p.bottom].forEach((yStart, i) => {
                             let h = (i===0) ? p.top : p.bottom;
                             let yRect = (i===0) ? 0 : height - p.bottom;
-                            
-                            ctx.fillStyle = "rgba(10, 10, 10, 0.9)";
-                            ctx.fillRect(p.x, yRect, p.w, h);
-                            
-                            ctx.lineWidth = 3; ctx.strokeStyle = mainColor;
-                            ctx.strokeRect(p.x, yRect - (i===0?5:0), p.w, h + 5);
-
+                            ctx.fillStyle = "rgba(10, 10, 10, 0.9)"; ctx.fillRect(p.x, yRect, p.w, h);
+                            ctx.lineWidth = 3; ctx.strokeStyle = mainColor; ctx.strokeRect(p.x, yRect - (i===0?5:0), p.w, h + 5);
                             if(!PERF_MODE) {
                                 ctx.fillStyle = mainColor;
                                 for(let k = 0; k < h; k += 40) {
@@ -578,101 +587,53 @@
                                 }
                             }
                         });
-                        
                         ctx.fillStyle = mainColor; 
                         ctx.fillRect(p.x + 4, p.top - 15, p.w - 8, 15); 
                         ctx.fillRect(p.x + 4, height - p.bottom, p.w - 8, 15); 
                     }
-
-                    // --- STYLE 2: DATA STREAM (OPTIMIZED) ---
+                    // ERA 1: DATA STREAM (Optimized)
                     else if (era === 1) {
                         if(!PERF_MODE) { ctx.shadowBlur = 10; ctx.shadowColor = mainColor; }
-                        
-                        // 1. Semi-solid dark background
                         ctx.fillStyle = "rgba(0, 20, 10, 0.85)"; 
-                        ctx.fillRect(p.x, 0, p.w, p.top);
-                        ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
-
-                        // 2. Falling Data Bits (OPTIMIZED: Using Dashed Lines instead of Rectangles)
-                        // This turns 100+ draw calls into just 3 draw calls.
+                        ctx.fillRect(p.x, 0, p.w, p.top); ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
                         if(!PERF_MODE) {
-                            ctx.save();
-                            ctx.beginPath();
-                            ctx.rect(p.x, 0, p.w, p.top);
-                            ctx.rect(p.x, height - p.bottom, p.w, p.bottom);
-                            ctx.clip(); // Clip so lines don't draw in the gap
-
-                            ctx.lineWidth = 8; // Width of the "bits"
-                            ctx.strokeStyle = mainColor;
-                            ctx.setLineDash([12, 15]); // 12px bit, 15px empty space
-                            
-                            // Draw 3 columns of data
+                            ctx.save(); ctx.beginPath();
+                            ctx.rect(p.x, 0, p.w, p.top); ctx.rect(p.x, height - p.bottom, p.w, p.bottom); ctx.clip();
+                            ctx.lineWidth = 8; ctx.strokeStyle = mainColor; ctx.setLineDash([12, 15]); 
                             for(let col = 0; col < 3; col++) {
                                 let xPos = p.x + 12 + (col * 15);
-                                let speed = (frames * (2 + col)); // Animation speed
-                                
-                                ctx.lineDashOffset = -speed; // This makes it look like it's falling
-                                ctx.globalAlpha = 0.6;
-                                
-                                ctx.beginPath();
-                                ctx.moveTo(xPos, 0);
-                                ctx.lineTo(xPos, height);
-                                ctx.stroke();
+                                let speed = (frames * (2 + col)); 
+                                ctx.lineDashOffset = -speed; ctx.globalAlpha = 0.6;
+                                ctx.beginPath(); ctx.moveTo(xPos, 0); ctx.lineTo(xPos, height); ctx.stroke();
                             }
                             ctx.restore();
                         }
-
-                        // 3. Moving Borders
-                        ctx.lineWidth = 3;
-                        ctx.strokeStyle = mainColor;
-                        ctx.setLineDash([20, 10]); 
-                        ctx.lineDashOffset = frames * -3; 
-                        
-                        ctx.strokeRect(p.x, -5, p.w, p.top + 5);
-                        ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom + 5);
-                        
-                        ctx.setLineDash([]); // Reset
+                        ctx.lineWidth = 3; ctx.strokeStyle = mainColor;
+                        ctx.setLineDash([20, 10]); ctx.lineDashOffset = frames * -3; 
+                        ctx.strokeRect(p.x, -5, p.w, p.top + 5); ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom + 5);
+                        ctx.setLineDash([]); 
                     }
-
-                    // --- STYLE 3: QUANTUM SCANNER (High Security) ---
+                    // ERA 2: QUANTUM SCANNER
                     else if (era === 2) {
-                        // Reduced shadow blur slightly to help mobile performance
                         if(!PERF_MODE) { ctx.shadowBlur = 15; ctx.shadowColor = mainColor; }
-
                         ctx.fillStyle = "rgba(0, 5, 10, 0.95)";
-                        ctx.fillRect(p.x, 0, p.w, p.top);
-                        ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
-
-                        ctx.save();
-                        ctx.strokeStyle = mainColor;
-                        ctx.lineWidth = 3;
-                        
-                        // Batch the rail drawing
+                        ctx.fillRect(p.x, 0, p.w, p.top); ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
+                        ctx.save(); ctx.strokeStyle = mainColor; ctx.lineWidth = 3;
                         ctx.beginPath();
                         ctx.moveTo(p.x + 12, 0); ctx.lineTo(p.x + 12, p.top);
                         ctx.moveTo(p.x + p.w - 12, 0); ctx.lineTo(p.x + p.w - 12, p.top);
                         ctx.moveTo(p.x + 12, height - p.bottom); ctx.lineTo(p.x + 12, height);
                         ctx.moveTo(p.x + p.w - 12, height - p.bottom); ctx.lineTo(p.x + p.w - 12, height);
                         ctx.stroke();
-
-                        // Scanline
                         let scanPos = (Math.sin(frames * 0.05) + 1) * 0.5; 
-                        ctx.fillStyle = "#fff";
-                        ctx.shadowBlur = 15; // Inner glow
-                        ctx.shadowColor = "#fff";
-                        
+                        ctx.fillStyle = "#fff"; ctx.shadowBlur = 15; ctx.shadowColor = "#fff";
                         ctx.fillRect(p.x, scanPos * p.top, p.w, 4);
                         let botY = (height - p.bottom) + (scanPos * p.bottom);
                         ctx.fillRect(p.x, botY, p.w, 4);
-
                         ctx.restore();
-
-                        // Border
                         ctx.lineWidth = 2; ctx.strokeStyle = mainColor;
-                        ctx.strokeRect(p.x, -2, p.w, p.top+2);
-                        ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom+2);
+                        ctx.strokeRect(p.x, -2, p.w, p.top+2); ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom+2);
                     }
-                    
                     ctx.shadowBlur = 0; 
                 }
             }
@@ -813,6 +774,7 @@
     </script>
 </body>
 </html>
+
 
 
 
