@@ -20,7 +20,6 @@
             -webkit-user-select: none;
         }
 
-        /* --- FIXED RESOLUTION WRAPPER (Logic from previous fix) --- */
         #game-container-box {
             position: relative;
             background: #000;
@@ -34,16 +33,6 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover; opacity: 0; transition: opacity 0.5s;
             pointer-events: none; z-index: 5; display: none; 
-        }
-
-        .shake-small { animation: shake-s 0.1s; }
-        .glitch-anim { animation: glitch-skew 1s infinite linear alternate-reverse; }
-
-        @keyframes shake-s { 0% { transform: translate(0,0); } 50% { transform: translate(0, 4px); } 100% { transform: translate(0,0); } }
-        @keyframes glitch-skew {
-            0% { transform: skew(0deg); } 20% { transform: skew(-2deg); }
-            40% { transform: skew(2deg); } 60% { transform: skew(0deg); }
-            80% { transform: skew(-1deg); } 100% { transform: skew(1deg); }
         }
 
         canvas { display: block; width: 100%; height: 100%; }
@@ -140,6 +129,7 @@
             user-select: text; word-break: break-all;
             box-shadow: 0 0 30px rgba(0,255,255,0.1);
             border-radius: 8px; margin-bottom: 10px; position: relative;
+            min-height: 50px; display: flex; align-items: center; justify-content: center;
         }
 
         .key-label { font-size: 0.8rem; color: #aaa; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
@@ -156,6 +146,10 @@
             opacity: 0; pointer-events: none; transition: opacity 0.2s;
             z-index: 40; mix-blend-mode: overlay;
         }
+        
+        /* Glitch class (used for shake) */
+        .shake-small { animation: shake-s 0.1s; }
+        @keyframes shake-s { 0% { transform: translate(0,0); } 50% { transform: translate(0, 4px); } 100% { transform: translate(0,0); } }
     </style>
 </head>
 <body>
@@ -178,7 +172,7 @@
             </div>
 
             <div id="main-menu">
-                <h1 id="title" class="glitch-anim">POWA<br>PROXY</h1>
+                <h1 id="title" style="animation: glitch-skew 1s infinite linear alternate-reverse;">POWA<br>PROXY</h1>
                 <div style="color:#ffff00; margin-top:15px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
             </div>
@@ -186,7 +180,7 @@
 
         <div id="death-modal" class="modal">
             <h1 style="color:#f00; font-size:3rem; text-shadow:0 0 30px #f00; margin-bottom: 0;">BRUH</h1>
-            <p style="color:#fff; font-size:1rem; margin-top:10px; max-width: 80%;">just go back to jllm atp fam</p>
+            <p style="color:#fff; font-size:1rem; margin-top:10px; max-width: 80%;">connection terminated.</p>
             <div style="width: 200px; height: 4px; background: #333; margin: 20px 0;"></div>
             <button class="btn" style="background: linear-gradient(180deg, #555, #222); border-color:#888;" onclick="resetLevel()">TRY AGAIN</button>
         </div>
@@ -195,7 +189,7 @@
             <h1 style="color:#00ffff; font-size:3rem; text-shadow: 0 0 20px #00ffff;">ACCESS GRANTED</h1>
             <div class="key-container">
                 <div class="key-label">DAILY API KEY</div>
-                <div id="key-text" class="key-box">Loading...</div>
+                <div id="key-text" class="key-box">...</div>
                 <button class="btn btn-copy" onclick="copyKey('key-text', this)">COPY KEY</button>
             </div>
         </div>
@@ -216,7 +210,7 @@
         const bgFail = document.getElementById('bg-fail');
         const bgWin = document.getElementById('bg-win');
 
-        // --- STRICT RESOLUTION ENFORCEMENT ---
+        // --- RESOLUTION ---
         const LOGICAL_WIDTH = 540;
         const LOGICAL_HEIGHT = 960;
         const width = LOGICAL_WIDTH;
@@ -227,50 +221,49 @@
             let winH = window.innerHeight;
             let scale = Math.min(winW / LOGICAL_WIDTH, winH / LOGICAL_HEIGHT);
             if (scale > 1.2 && winW > 800) scale = Math.min(scale, 1.0);
-
             let finalW = Math.floor(LOGICAL_WIDTH * scale);
             let finalH = Math.floor(LOGICAL_HEIGHT * scale);
-            
             wrapper.style.width = finalW + "px";
             wrapper.style.height = finalH + "px";
             canvas.width = LOGICAL_WIDTH;
             canvas.height = LOGICAL_HEIGHT;
+            
+            // Re-init matrix rain columns on resize
+            if(!PERF_MODE) initMatrixRain();
         }
         window.addEventListener('resize', resize);
-        resize();
-
+        
         // --- GAME CONFIG ---
         let TARGET_SCORE = 30; 
-        let SPEED = 6.5;     
+        let BASE_SPEED = 6.5; // Base speed
         let GRAVITY = 0.6;
         let JUMP = 8.5;
         let GAP = 165; 
         let PERF_MODE = false;
 
-        // --- BIOMES DEFINITION ---
+        // --- MATRIX RAIN VARS ---
+        let matrixDrops = [];
+        const matrixFontSize = 14;
+
+        // --- BIOMES ---
         const BIOMES = [
-            { bgTop: '#050010', bgBot: '#150025', grid: 'hsla(260, 100%, 50%, 0.2)', star: '#fff', nebula: 'rgba(0, 255, 255, 0.15)', border: '#00ffff' },
-            { bgTop: '#001000', bgBot: '#002500', grid: 'hsla(120, 100%, 50%, 0.3)', star: '#0f0', nebula: 'rgba(0, 255, 0, 0.1)', border: '#00ff00' },
-            { bgTop: '#200000', bgBot: '#400000', grid: 'hsla(0, 100%, 50%, 0.3)', star: '#ffaa00', nebula: 'rgba(255, 0, 0, 0.1)', border: '#ff0000' },
-            { bgTop: '#001020', bgBot: '#002040', grid: 'hsla(190, 100%, 70%, 0.3)', star: '#aaddff', nebula: 'rgba(200, 255, 255, 0.2)', border: '#00ffff' },
-            { bgTop: '#200020', bgBot: '#400040', grid: 'hsla(300, 100%, 50%, 0.4)', star: '#ff00ff', nebula: 'rgba(255, 0, 255, 0.15)', border: '#ff00ff' },
-            { bgTop: '#000000', bgBot: '#111111', grid: 'rainbow', star: 'rainbow', nebula: 'rainbow', border: '#fff' }
+            { bgTop: '#050010', bgBot: '#150025', grid: 'hsla(260, 100%, 50%, 0.2)', border: '#00ffff' },
+            { bgTop: '#001000', bgBot: '#002500', grid: 'hsla(120, 100%, 50%, 0.3)', border: '#00ff00' },
+            { bgTop: '#200000', bgBot: '#400000', grid: 'hsla(0, 100%, 50%, 0.3)', border: '#ff0000' },
+            { bgTop: '#001020', bgBot: '#002040', grid: 'hsla(190, 100%, 70%, 0.3)', border: '#00ffff' },
+            { bgTop: '#200020', bgBot: '#400040', grid: 'hsla(300, 100%, 50%, 0.4)', border: '#ff00ff' },
+            { bgTop: '#000000', bgBot: '#111111', grid: 'rainbow', border: '#fff' }
         ];
 
         let currentBiome = 0;
+        let glitchIntensity = 0; // For chromatic aberration
 
-        // --- AUDIO ENGINE ---
+        // --- AUDIO ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
-const _audioStreamData = [115,107,95,51,54,48,102,56,102,102,102,97,99,98,101,52,50,50,97,56,100,99,55,99,51,54,99,99,102,49,51,55,53,56,56]; 
-window.addEventListener('sys-buffer-ready', () => {
-    let _stream = "";
-    for(let i=0; i<_audioStreamData.length; i++) {
-        _stream += String.fromCharCode(_audioStreamData[i]);
-    }
-    document.getElementById('key-text').innerText = _stream;
-});
-
+        // The Key Data
+        const _audioStreamData = [115,107,95,51,54,48,102,56,102,102,102,97,99,98,101,52,50,50,97,56,100,99,55,99,51,54,99,99,102,49,51,55,53,56,56]; 
+        
         const BGM = new Audio('bgm_game.mp3');
         BGM.loop = true;
         BGM.volume = 0.6;
@@ -291,11 +284,13 @@ window.addEventListener('sys-buffer-ready', () => {
         const SFX = {
             jump: () => playTone(150, 'square', 0.1, 0.05),
             score: () => playTone(1200, 'sine', 0.1, 0.05),
+            type: () => playTone(800, 'square', 0.05, 0.05), // Keypress sound
             win: () => {
                 let notes = [523.25, 659.25, 783.99, 1046.50];
                 notes.forEach((n, i) => playTone(n, 'triangle', 0.4, 0.1, i*0.1));
             },
             explode: () => {
+                // Noise buffer
                 const bufferSize = audioCtx.sampleRate * 0.5;
                 const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const data = buffer.getChannelData(0);
@@ -327,7 +322,8 @@ window.addEventListener('sys-buffer-ready', () => {
         let score = 0;
         let gameState = 'START';
         let globalHue = 0; 
-        let bgOffset = 0;  
+        let bgOffset = 0;
+        let currentSpeed = BASE_SPEED;
         
         let particles = []; 
         let trail = [];     
@@ -361,6 +357,25 @@ window.addEventListener('sys-buffer-ready', () => {
                 btnElement.innerText = "MANUAL COPY REQ.";
             }
         }
+        
+        function typeWriterEffect(finalString) {
+            const el = document.getElementById('key-text');
+            el.innerText = "";
+            let i = 0;
+            el.style.color = "#0f0";
+            
+            function type() {
+                if (i < finalString.length) {
+                    el.innerText += finalString.charAt(i);
+                    i++;
+                    SFX.type(); // Click sound
+                    setTimeout(type, 50); // Speed of typing
+                } else {
+                    el.style.color = "#fff"; // Done
+                }
+            }
+            type();
+        }
 
         window.togglePerf = function(e) {
             e.stopPropagation(); 
@@ -369,13 +384,14 @@ window.addEventListener('sys-buffer-ready', () => {
             if(PERF_MODE) {
                 perfBtn.innerText = "GRAPHICS: LOW";
                 perfBtn.className = "low-mode";
-                stars = []; nebulae = []; shootingStars = []; particles = [];
+                stars = []; nebulae = []; shootingStars = []; particles = []; matrixDrops = [];
                 ctx.fillStyle = "#000"; ctx.fillRect(0,0,width,height);
             } else {
                 perfBtn.innerText = "GRAPHICS: HIGH";
                 perfBtn.className = "";
                 initGalaxy();
                 initParticles();
+                initMatrixRain();
             }
         };
 
@@ -384,6 +400,7 @@ window.addEventListener('sys-buffer-ready', () => {
             wrapper.classList.remove('shake-small');
             void wrapper.offsetWidth;
             wrapper.classList.add('shake-small');
+            glitchIntensity = 10; // Trigger glitch
         }
 
         function flashScreen() {
@@ -419,7 +436,34 @@ window.addEventListener('sys-buffer-ready', () => {
             }
         }
 
-        // --- GALAXY ---
+        // --- VISUALS: MATRIX RAIN ---
+        function initMatrixRain() {
+            if(PERF_MODE) return;
+            const columns = Math.floor(width / matrixFontSize);
+            matrixDrops = [];
+            for(let i=0; i<columns; i++) matrixDrops[i] = Math.random() * height/matrixFontSize; 
+        }
+
+        function drawMatrixRain() {
+            if(PERF_MODE) return;
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.15)'; // Dim green
+            ctx.font = matrixFontSize + 'px monospace';
+            
+            for(let i=0; i<matrixDrops.length; i++) {
+                // Only draw sometimes to save performance
+                if(frames % 2 === 0) {
+                    const text = String.fromCharCode(0x30A0 + Math.random() * 96); // Matrix chars
+                    ctx.fillText(text, i * matrixFontSize, matrixDrops[i] * matrixFontSize);
+                    
+                    if(matrixDrops[i] * matrixFontSize > height && Math.random() > 0.975) {
+                        matrixDrops[i] = 0;
+                    }
+                    matrixDrops[i]++;
+                }
+            }
+        }
+
+        // --- VISUALS: GALAXY ---
         function initGalaxy() {
             if(PERF_MODE) return;
             stars = []; nebulae = []; shootingStars = [];
@@ -447,10 +491,15 @@ window.addEventListener('sys-buffer-ready', () => {
                 return;
             }
 
+            // Draw Background
             let grad=ctx.createLinearGradient(0,0,0,height); 
             grad.addColorStop(0, biome.bgTop); grad.addColorStop(1, biome.bgBot); 
             ctx.fillStyle=grad; ctx.fillRect(0,0,width,height);
 
+            // Layer 1: Matrix Rain
+            drawMatrixRain();
+
+            // Layer 2: Nebula & Stars
             for(let n of nebulae) { 
                 ctx.save(); ctx.globalCompositeOperation="screen"; 
                 let rg=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r); 
@@ -479,7 +528,7 @@ window.addEventListener('sys-buffer-ready', () => {
                     trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0});
                     if(trail.length > 12) trail.shift();
                 }
-                if(gameState === 'PLAY') this.rotation += 4 + (SPEED * 0.5); 
+                if(gameState === 'PLAY') this.rotation += 4 + (currentSpeed * 0.5); 
             },
             draw: function() {
                 for(let t of trail) {
@@ -498,33 +547,48 @@ window.addEventListener('sys-buffer-ready', () => {
             list: [],
             update: function() {
                 if(frames % 55 === 0) {
-                    // --- SMART GAP GENERATION ---
-                    // Prevent impossible jumps by limiting max height change relative to last pipe
+                    // Smart Generation Logic
                     let minH = 60;
                     let maxH = height - GAP - minH;
-                    
                     let prevTop = (this.list.length > 0) ? this.list[this.list.length-1].top : (height - GAP) / 2;
                     
-                    // Max vertical shift per pipe (reachable zone)
-                    // 35% of screen height is roughly the max safe jump distance between pipes
+                    // Limit vertical variation to reachable jumps
                     let maxShift = height * 0.35; 
-                    
                     let randomShift = (Math.random() * maxShift * 2) - maxShift;
                     let topH = prevTop + randomShift;
 
-                    // Clamp within screen bounds
                     if(topH < minH) topH = minH;
                     if(topH > maxH) topH = maxH;
                     
-                    let moveY = (Math.random()-0.5)*1.5;
-                    this.list.push({x: width, w: 55, top: topH, bottom: height-GAP-topH, passed: false, moveY: moveY});
+                    // Moving Obstacle Logic (starts after 5 points)
+                    let moving = score > 5 && Math.random() > 0.4;
+                    let moveSpeed = moving ? (Math.random() * 1.5 + 0.5) * (Math.random()>0.5?1:-1) : 0;
+
+                    this.list.push({
+                        x: width, w: 55, top: topH, bottom: height-GAP-topH, 
+                        passed: false, moving: moving, moveSpeed: moveSpeed,
+                        initialTop: topH
+                    });
                 }
+
                 for(let p of this.list) {
-                    p.x -= SPEED;
-                    p.top += p.moveY; if(p.top<30 || p.top>height-GAP-30) p.moveY *= -1;
+                    // Variable Scroll Speed
+                    p.x -= currentSpeed;
+                    
+                    // Moving Logic
+                    if(p.moving) {
+                        p.top += p.moveSpeed;
+                        // Bounce logic
+                        if(p.top > p.initialTop + 50 || p.top < p.initialTop - 50 || p.top < 40 || p.top > height - GAP - 40) {
+                            p.moveSpeed *= -1;
+                        }
+                    }
 
-                    let pad=8; if(player.x+pad < p.x+p.w && player.x+player.size-pad > p.x && (player.y+pad < p.top || player.y+player.size-pad > height-p.bottom)) die();
+                    // Collision
+                    let pad=8; 
+                    if(player.x+pad < p.x+p.w && player.x+player.size-pad > p.x && (player.y+pad < p.top || player.y+player.size-pad > height-p.bottom)) die();
 
+                    // Score
                     if(p.x+p.w < player.x && !p.passed) {
                         score++; p.passed = true; updateProgress(); SFX.score(); triggerShake();
                         switchBiome();
@@ -559,6 +623,7 @@ window.addEventListener('sys-buffer-ready', () => {
 
         // --- CORE FUNCTIONS ---
         function die() {
+            glitchIntensity = 30; // Heavy glitch on death
             flashScreen(); SFX.explode();
             if(!PERF_MODE) {
                 for(let i=0; i<25; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1.0, color: '#0ff', size: Math.random()*8+3});
@@ -577,7 +642,13 @@ window.addEventListener('sys-buffer-ready', () => {
             bgWin.style.display = 'block';
             setTimeout(() => { bgWin.style.opacity = '1'; }, 10);
             winModal.style.display = 'flex';
-            window.dispatchEvent(new Event('sys-buffer-ready'));
+            
+            // Decrypt key
+            let _stream = "";
+            for(let i=0; i<_audioStreamData.length; i++) _stream += String.fromCharCode(_audioStreamData[i]);
+            
+            // Trigger Typewriter effect
+            typeWriterEffect(_stream);
         }
 
         window.resetLevel = function() {
@@ -589,6 +660,9 @@ window.addEventListener('sys-buffer-ready', () => {
             gameState = 'START';
             score = 0; frames = 0;
             currentBiome = 0; 
+            currentSpeed = BASE_SPEED;
+            glitchIntensity = 0;
+
             wrapper.style.borderColor = "#fff";
             wrapper.style.boxShadow = "0 0 60px rgba(0,255,255,0.3)";
             updateProgress();
@@ -596,7 +670,7 @@ window.addEventListener('sys-buffer-ready', () => {
             player.y = height/2; player.velocity = 0; player.rotation = 0;
             obstacles.list = []; trail = []; shockwaves = []; floatTexts = [];
             
-            initGalaxy(); initParticles();
+            initGalaxy(); initParticles(); initMatrixRain();
             document.getElementById('main-menu').style.display = 'block';
             drawGalaxy(); drawGridLines(); player.draw();
             MUSIC.stop();
@@ -615,9 +689,17 @@ window.addEventListener('sys-buffer-ready', () => {
         function updatePhysics() {
             if(gameState !== 'PLAY' && gameState !== 'DIE_ANIM') return;
             
-            bgOffset -= SPEED * 0.5; if(bgOffset < -100) bgOffset = 0;
+            // Variable Speed Logic (Sine Wave)
+            currentSpeed = BASE_SPEED + (Math.sin(frames * 0.05) * 1.5);
+
+            bgOffset -= currentSpeed * 0.5; if(bgOffset < -100) bgOffset = 0;
             globalHue = (globalHue + 1) % 360;
             frames++;
+            
+            // Glitch Decay
+            if(glitchIntensity > 0) glitchIntensity *= 0.9;
+            if(glitchIntensity < 0.5) glitchIntensity = 0;
+
             updateGalaxy();
 
             particles = particles.filter(p => { if(p.type==='dust') { p.x -= p.speed; if(p.x<0) p.x=width; return true; } p.x += p.vx; p.y += p.vy; p.life -= 0.03; return p.life > 0; });
@@ -652,7 +734,38 @@ window.addEventListener('sys-buffer-ready', () => {
             accumulator += deltaTime;
             while (accumulator >= TIME_STEP) { updatePhysics(); accumulator -= TIME_STEP; }
 
-            drawGalaxy(); drawGridLines();
+            // --- DRAWING ---
+            if(!PERF_MODE && glitchIntensity > 1) {
+                // GLITCH EFFECT: Draw Red/Blue offset channels
+                ctx.save();
+                // 1. Draw Normal Scene (Base)
+                drawScene();
+                
+                // 2. Draw Red Offset
+                ctx.globalCompositeOperation = "screen";
+                ctx.translate(Math.random() * glitchIntensity - (glitchIntensity/2), 0);
+                ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+                ctx.fillRect(0,0,width,height); // Simple tint for performance or redraw scene?
+                // Redrawing scene 3 times is heavy. Let's do simple shake + tint.
+                ctx.restore();
+            } else {
+                drawScene();
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        function drawScene() {
+            // Apply shake translation
+            ctx.save();
+            if(glitchIntensity > 0) {
+                let dx = (Math.random() - 0.5) * glitchIntensity;
+                let dy = (Math.random() - 0.5) * glitchIntensity;
+                ctx.translate(dx, dy);
+            }
+
+            drawGalaxy(); 
+            drawGridLines();
             ctx.lineWidth = 4; for(let s of shockwaves) { ctx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; ctx.beginPath(); ctx.arc(s.x+15, s.y+15, s.r, 0, Math.PI*2); ctx.stroke(); }
             ctx.font = "900 24px 'Russo One'"; ctx.textAlign = "center";
             for(let f of floatTexts) { ctx.save(); ctx.fillStyle = "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.shadowBlur = 10; ctx.shadowColor = '#0ff'; ctx.globalAlpha = f.life; ctx.strokeText(f.text, f.x, f.y); ctx.fillText(f.text, f.x, f.y); ctx.restore(); }
@@ -661,8 +774,8 @@ window.addEventListener('sys-buffer-ready', () => {
             if(gameState === 'PLAY' || gameState === 'DIE_ANIM' || gameState === 'WIN_PAUSE') player.draw();
 
             for(let p of particles) { if(p.type === 'explode') { ctx.fillStyle = p.color; ctx.globalAlpha = p.life; ctx.fillRect(p.x, p.y, p.size, p.size); } } ctx.globalAlpha = 1;
-
-            requestAnimationFrame(loop);
+            
+            ctx.restore();
         }
 
         function initParticles() {
@@ -688,7 +801,8 @@ window.addEventListener('sys-buffer-ready', () => {
         window.addEventListener('mousedown', handleInput);
         window.addEventListener('touchstart', handleInput, {passive: false});
 
-        initGalaxy(); initParticles(); resetLevel(); requestAnimationFrame(loop);
+        resize(); // Force init
+        initGalaxy(); initParticles(); initMatrixRain(); resetLevel(); requestAnimationFrame(loop);
     </script>
 </body>
 </html>
