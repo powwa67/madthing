@@ -540,69 +540,122 @@
                 }
                 if(this.list.length > 0 && this.list[0].x < -100) this.list.shift();
             },
-            draw: function() {
+           draw: function() {
+                // Determine the "Era" based on score
+                // 0 = Server Racks, 1 = Wireframe/Glitch, 2 = Heavy Armor
+                let era = Math.floor(score / 10) % 3; 
+
                 let mainColor = BIOMES[currentBiome].border;
                 if(currentBiome === 5) mainColor = `hsl(${globalHue}, 100%, 60%)`;
 
-                // Pulse effect for server lights
                 let pulse = Math.sin(frames * 0.1) * 0.5 + 0.5;
 
                 for(let p of this.list) {
-                    // --- TOP PILLAR ---
-                    if(!PERF_MODE) { ctx.shadowBlur = 15 + (pulse * 10); ctx.shadowColor = mainColor; }
                     
-                    // Main body (dark translucent)
-                    ctx.fillStyle = "rgba(10, 10, 10, 0.9)";
-                    ctx.fillRect(p.x, 0, p.w, p.top);
-                    
-                    // Borders
-                    ctx.lineWidth = 3; ctx.strokeStyle = mainColor;
-                    ctx.strokeRect(p.x, -5, p.w, p.top + 5);
+                    // --- STYLE 1: THE DATACENTER (Standard) ---
+                    if (era === 0) {
+                        if(!PERF_MODE) { ctx.shadowBlur = 15 + (pulse * 10); ctx.shadowColor = mainColor; }
+                        
+                        // Top & Bottom Logic shared to keep code dry-ish
+                        [p.top, height - p.bottom].forEach((yStart, i) => {
+                            let h = (i===0) ? p.top : p.bottom;
+                            let yRect = (i===0) ? 0 : height - p.bottom;
+                            
+                            // Fill
+                            ctx.fillStyle = "rgba(10, 10, 10, 0.9)";
+                            ctx.fillRect(p.x, yRect, p.w, h);
+                            
+                            // Stroke
+                            ctx.lineWidth = 3; ctx.strokeStyle = mainColor;
+                            ctx.strokeRect(p.x, yRect - (i===0?5:0), p.w, h + 5);
 
-                    // Tech Details (Server Rack Lights)
-                    if(!PERF_MODE) {
-                        ctx.fillStyle = mainColor;
-                        for(let i = 0; i < p.top; i += 40) {
-                            // Pseudo-random lights based on position
-                            if((Math.floor(p.x + i) % 3) === 0) { 
-                                let alpha = Math.sin(i + frames * 0.2) > 0 ? 1 : 0.2; // Blinking
-                                ctx.globalAlpha = alpha;
-                                ctx.fillRect(p.x + 10, i, 10, 4); 
-                                ctx.fillRect(p.x + p.w - 20, i + 10, 10, 4); 
-                                ctx.globalAlpha = 1.0;
+                            // Lights
+                            if(!PERF_MODE) {
+                                ctx.fillStyle = mainColor;
+                                for(let k = 0; k < h; k += 40) {
+                                    let lightY = (i===0) ? k : yRect + k;
+                                    if((Math.floor(p.x + k) % 3) === 0) {
+                                        ctx.globalAlpha = Math.sin(k + frames*0.2)>0?1:0.2;
+                                        ctx.fillRect(p.x + 10, lightY, 10, 4);
+                                        ctx.fillRect(p.x + p.w - 20, lightY+10, 10, 4);
+                                        ctx.globalAlpha = 1;
+                                    }
+                                }
                             }
-                        }
-                        // Circuit line
-                        ctx.beginPath(); ctx.moveTo(p.x + p.w/2, 0); ctx.lineTo(p.x + p.w/2, p.top - 10);
-                        ctx.lineWidth = 1; ctx.stroke();
+                        });
+                        // End Caps
+                        ctx.fillStyle = mainColor; 
+                        ctx.fillRect(p.x + 4, p.top - 15, p.w - 8, 15); // Top Cap
+                        ctx.fillRect(p.x + 4, height - p.bottom, p.w - 8, 15); // Bot Cap
                     }
 
-                    // End Cap
-                    ctx.fillStyle = mainColor; ctx.fillRect(p.x + 4, p.top - 15, p.w - 8, 15);
+                    // --- STYLE 2: UNSTABLE SECTOR (Wireframe/Glitch) ---
+                    else if (era === 1) {
+                        if(!PERF_MODE) { ctx.shadowBlur = 5; ctx.shadowColor = "#fff"; }
+                        
+                        ctx.save();
+                        ctx.strokeStyle = mainColor;
+                        ctx.lineWidth = 2;
+                        
+                        // Dashed lines to look like raw data
+                        ctx.setLineDash([10, 5]); 
+                        ctx.lineDashOffset = -frames * 2; // Moving edges
 
-                    // --- BOTTOM PILLAR ---
-                    ctx.fillStyle = "rgba(10, 10, 10, 0.9)";
-                    ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
-                    
-                    ctx.lineWidth = 3; ctx.strokeStyle = mainColor;
-                    ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom + 5);
-
-                    // Bottom Tech Details
-                    if(!PERF_MODE) {
-                        ctx.fillStyle = mainColor;
-                        for(let i = 0; i < p.bottom; i += 40) {
-                            let yPos = height - p.bottom + i;
-                            if((Math.floor(p.x + i) % 4) === 0) {
-                                let alpha = Math.cos(i + frames * 0.2) > 0 ? 1 : 0.2;
-                                ctx.globalAlpha = alpha;
-                                ctx.fillRect(p.x + 15, yPos, 25, 2); 
-                                ctx.globalAlpha = 1.0;
+                        // Top Pipe
+                        ctx.strokeRect(p.x, -5, p.w, p.top + 5);
+                        // Bottom Pipe
+                        ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom + 5);
+                        
+                        ctx.setLineDash([]); // Reset for interior
+                        
+                        // "Static" noise inside
+                        if(!PERF_MODE) {
+                            ctx.fillStyle = mainColor;
+                            for(let k=0; k<10; k++) {
+                                let rx = p.x + Math.random()*p.w;
+                                let ry = Math.random() * height;
+                                if(ry < p.top || ry > height - p.bottom) {
+                                    ctx.fillRect(rx, ry, 2, 2);
+                                }
                             }
                         }
+                        ctx.restore();
                     }
 
-                    // Bottom End Cap
-                    ctx.fillStyle = mainColor; ctx.fillRect(p.x + 4, height - p.bottom, p.w - 8, 15);
+                    // --- STYLE 3: ARMORED CORE (Hazard Stripes) ---
+                    else if (era === 2) {
+                        if(!PERF_MODE) { ctx.shadowBlur = 20; ctx.shadowColor = mainColor; }
+
+                        ctx.save();
+                        // Create a clipping region for the stripes so they don't draw outside pipes
+                        ctx.beginPath();
+                        ctx.rect(p.x, 0, p.w, p.top);
+                        ctx.rect(p.x, height - p.bottom, p.w, p.bottom);
+                        ctx.clip();
+
+                        // Background
+                        ctx.fillStyle = "#000";
+                        ctx.fill();
+
+                        // Draw Stripes
+                        ctx.strokeStyle = mainColor;
+                        ctx.lineWidth = 5;
+                        let offset = (frames * 2) % 40;
+                        for(let y = -40; y < height; y+=30) {
+                            ctx.beginPath();
+                            ctx.moveTo(p.x - 10, y + offset);
+                            ctx.lineTo(p.x + p.w + 10, y + offset + 30);
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+
+                        // Solid thick borders
+                        ctx.lineWidth = 4;
+                        ctx.strokeStyle = "#fff";
+                        ctx.strokeRect(p.x, -2, p.w, p.top+2);
+                        ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom+2);
+                    }
+                    
                     ctx.shadowBlur = 0; // Reset
                 }
             }
@@ -743,3 +796,4 @@
     </script>
 </body>
 </html>
+
