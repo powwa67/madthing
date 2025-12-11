@@ -273,13 +273,38 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- GAME CONFIG ---
+        // --- GAME CONFIG & VERSION CONTROL ---
+        // !!! IMPORTANT: CHANGE "KEY_ID" WHEN YOU UPDATE THE API KEY !!!
+        const KEY_ID = "v1_2025_05_20"; 
+        
         let TARGET_SCORE = 3; 
         let SPEED = 6.5;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
         let GAP = 170; 
         let PERF_MODE = false;
+
+        // --- STORAGE & PERSISTENCE CHECK ---
+        let highScore = localStorage.getItem('powa-high-score') || 0;
+        let storedKeyId = localStorage.getItem('powa-key-id');
+        let storedUnlock = localStorage.getItem('powa-unlocked');
+        
+        // This variable determines if the user starts in infinite mode or not
+        let isUnlocked = false;
+
+        if(storedKeyId === KEY_ID && storedUnlock === 'true') {
+            isUnlocked = true;
+        } else {
+            // New Key detected OR player never unlocked it -> Reset status
+            if(storedKeyId !== KEY_ID) {
+                // If key changed, we update the ID but keep High Score
+                localStorage.setItem('powa-key-id', KEY_ID);
+                localStorage.removeItem('powa-unlocked');
+            }
+            isUnlocked = false;
+        }
+        
+        menuHighScore.innerText = `BEST: ${highScore}`;
 
         // --- BIOMES DEFINITION ---
         const BIOMES = [
@@ -293,11 +318,6 @@
 
         let currentBiome = 0;
         let infiniteMode = false;
-        let isUnlocked = false; // Tracks if the player has unlocked infinite mode this session
-        
-        // --- HIGH SCORE LOGIC ---
-        let highScore = localStorage.getItem('powa-high-score') || 0;
-        menuHighScore.innerText = `BEST: ${highScore}`;
 
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
@@ -769,6 +789,11 @@
 
         function winGame() {
             gameState = 'WIN_PAUSE'; 
+            
+            // SAVE UNLOCKED STATE
+            localStorage.setItem('powa-unlocked', 'true');
+            isUnlocked = true;
+
             MUSIC.pause();
             SFX.win();
             flashScreen();
@@ -780,7 +805,8 @@
 
         window.continueGame = function() {
             infiniteMode = true;
-            isUnlocked = true; // Mark as unlocked for this session
+            isUnlocked = true; 
+            localStorage.setItem('powa-unlocked', 'true'); // Ensure it's saved
             
             winModal.style.display = 'none';
             bgWin.style.opacity = '0';
@@ -813,9 +839,9 @@
             score = 0; frames = 0;
             currentBiome = 0; 
             
-            // SMART RESET LOGIC
+            // SMART RESET LOGIC - BASED ON SAVED STATE OR SESSION STATE
             if (isUnlocked) {
-                // If previously unlocked, stay in infinite mode
+                // If previously unlocked (even after refresh), start in infinite mode
                 infiniteMode = true;
                 progressContainer.style.display = 'none';
                 scoreCounter.style.display = 'block';
