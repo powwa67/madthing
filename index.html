@@ -812,23 +812,18 @@
             bgWin.style.opacity = '0';
             setTimeout(() => { bgWin.style.display = 'none'; }, 500);
 
-            // RESET SCORE TO 0 FOR ENDLESS RUN
-            score = 0; 
+            // --- CHANGES START HERE ---
+            // We NO LONGER reset score = 0 or currentBiome = 0
+            // The game continues exactly from the current score (e.g., 30)
             
-            // RESET BIOME TO MATCH SCORE
-            currentBiome = 0;
-            wrapper.style.borderColor = "#fff";
-            wrapper.style.boxShadow = "0 0 60px rgba(0,255,255,0.3)";
-            
-            // UI SWITCH
+            // UI SWITCH: Hide Progress, Show Score
             progressContainer.style.display = 'none';
             scoreCounter.style.display = 'block';
-            scoreCounter.innerText = score;
+            scoreCounter.innerText = score; // Now shows "30" instead of "0"
 
-            // --- THE FIX IS HERE ---
-            // We force the player to jump immediately so they don't fall
+            // Force a small jump so the player doesn't fall and die immediately
             player.velocity = -JUMP; 
-            // -----------------------
+            // --- CHANGES END HERE ---
 
             gameState = 'PLAY';
             MUSIC.resume();
@@ -961,6 +956,7 @@
     </script>
 </body>
 </html>
+
 
 
 
