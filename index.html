@@ -266,10 +266,10 @@
             <div id="death-score-display" style="color:#fff; font-size:1.5rem; margin: 10px 0;">SCORE: 0</div>
             <div id="death-best-display" style="color:#bd00ff; font-size:1.2rem; text-shadow:0 0 10px #bd00ff;">BEST: 0</div>
             
-            <input type="text" id="username-input" placeholder="ENTER NAME" maxlength="10" 
-                   style="background: #111; border: 2px solid #fff; color: #fff; padding: 10px; 
-                          font-family: 'Russo One', sans-serif; font-size: 1.2rem; text-align: center; 
-                          text-transform: uppercase; margin: 15px 0; width: 80%; border-radius: 8px; outline: none;">
+            <input type="text" id="username-input" placeholder="ENTER NAME" maxlength="15" 
+       style="background: #111; border: 2px solid #fff; color: #fff; padding: 10px; 
+              font-family: 'Russo One', sans-serif; font-size: 1.2rem; text-align: center; 
+              text-transform: uppercase; margin: 15px 0; width: 80%; border-radius: 8px; outline: none;">
             
             <button id="submit-score-btn" class="btn" onclick="submitScore()" 
                     style="background: linear-gradient(180deg, #00aaff, #0055aa); border-color: #fff; margin-bottom: 15px;">
@@ -1124,11 +1124,14 @@
         const db = firebase.firestore();
 
         // 1. Submit Score (Best Score Logic + Auto Submit)
-        window.submitScore = function(isAuto = false) {
+       window.submitScore = function(isAuto = false) {
             const nameInput = document.getElementById('username-input');
             const submitBtn = document.getElementById('submit-score-btn');
             
-            const name = nameInput.value.toUpperCase().trim() || "ANONYMOUS";
+            // FIX: Force a hard limit of 15 characters
+            // .substring(0, 15) chops off anything after the 15th letter
+            let rawName = nameInput.value.toUpperCase().trim();
+            const name = rawName.substring(0, 15) || "ANONYMOUS";
             
             // Save name for automatic future submissions
             localStorage.setItem('powa-username', name);
@@ -1234,6 +1237,7 @@
     </script>
 </body>
 </html>
+
 
 
 
