@@ -256,7 +256,7 @@
                 <div id="score-counter">30</div>
             </div>
 
-            <div id="main-menu">
+           <div id="main-menu">
                 <h1 id="title" class="glitch-anim">POWA<br>PROXY</h1>
                 <div id="menu-high-score" class="high-score-label">BEST: 0</div>
                 
@@ -269,6 +269,14 @@
                         <div style="text-align:center; color:#0ff; animation: blink 1s infinite; padding-top:20px;">CONNECTING...</div>
                     </div>
                 </div>
+
+                <div id="key-warning" style="display:none; color:#ff4444; font-size:1rem; margin-top:10px; border: 2px dashed #ff4444; background:rgba(20,0,0,0.8); padding:8px; animation: blink 2s infinite; font-family:'Russo One', sans-serif;">
+                    ⚠ DAILY KEY EXHAUSTED ⚠<br>
+                    <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
+                </div>
+                <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
+                <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
+            </div>
 
                 <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
@@ -348,9 +356,13 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- GAME CONFIG & VERSION CONTROL ---
+       // --- GAME CONFIG & VERSION CONTROL ---
         // Change this ID to force everyone to replay Level 1 AND RESET DAILY RANKING
         const KEY_ID = "day_5"; 
+        
+        // --- NEW TOGGLE SWITCH ---
+        // Set this to "ON" to show the warning, "OFF" to hide it.
+        const KEY_WARNING_MODE = "OFF"; 
         
         let TARGET_SCORE = 50; // Score to unlock Level 1
         let SPEED = 6.5;     
@@ -1192,7 +1204,13 @@
         
         // START ON DAILY TAB
         switchTab('daily');
+        // CHECK WARNING MODE
+        if (KEY_WARNING_MODE === "ON") {
+            const warnBox = document.getElementById('key-warning');
+            if(warnBox) warnBox.style.display = 'block';
+        }
     </script>
 </body>
 </html>
+
 
