@@ -103,22 +103,18 @@
             letter-spacing: 1px;
         }
 
-        /* --- LEADERBOARD STYLES (UPDATED FOR TABS) --- */
         #leaderboard {
             margin: 15px auto; 
             width: 320px; 
-            height: 210px; /* Made slightly taller for tabs */
+            height: 210px;
             background: rgba(0, 5, 10, 0.9); 
             border: 2px solid #00ffff; 
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.8);
             border-radius: 6px; 
             padding: 10px; 
-            
-            /* --- SCROLLING FIXES --- */
-            overflow: hidden; /* Hide main container scroll */
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-
             pointer-events: auto;            
             text-align: left; 
             box-sizing: border-box;
@@ -146,7 +142,6 @@
             text-align: left;
         }
 
-        /* Custom Scrollbar */
         #leaderboard-list::-webkit-scrollbar { width: 6px; }
         #leaderboard-list::-webkit-scrollbar-track { background: #000; }
         #leaderboard-list::-webkit-scrollbar-thumb { background: #bd00ff; border-radius: 3px; }
@@ -270,6 +265,10 @@
                     </div>
                 </div>
 
+                <div id="key-warning" style="display:none; color:#ff4444; font-size:1rem; margin-top:10px; border: 2px dashed #ff4444; background:rgba(20,0,0,0.8); padding:8px; animation: blink 2s infinite; font-family:'Russo One', sans-serif;">
+                    ⚠ DAILY KEY EXHAUSTED ⚠<br>
+                    <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
+                </div>
                 <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
             </div>
@@ -352,7 +351,11 @@
         // Change this ID to force everyone to replay Level 1 AND RESET DAILY RANKING
         const KEY_ID = "day_5"; 
         
-        let TARGET_SCORE = 50; // Score to unlock Level 1
+        // --- KEY WARNING SWITCH ---
+        // Set this to "ON" to show the warning, "OFF" to hide it.
+        const KEY_WARNING_MODE = "OFF"; 
+
+        let TARGET_SCORE = 50; 
         let SPEED = 6.5;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
@@ -462,7 +465,7 @@
         // --- STATE & ASSETS ---
         let frames = 0;
         let score = 0;
-        let pipeSpawnCount = 0; // Tracks pipes for shield logic
+        let pipeSpawnCount = 0; 
         let hasShieldSpawned = false;
         let gameState = 'START';
         let globalHue = 0; 
@@ -472,7 +475,7 @@
         let trail = [];     
         let shockwaves = [];
         let floatTexts = []; 
-        let items = []; // For Shield
+        let items = []; 
         
         let stars = [];
         let nebulae = [];
@@ -634,7 +637,6 @@
                 ctx.lineWidth=3; ctx.strokeStyle="#fff"; ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
                 let eyeOffset=Math.sin(frames*0.2)*2; ctx.fillStyle="#0ff"; ctx.fillRect(-6+eyeOffset, -6-eyeOffset, 12, 12); 
                 
-                // DRAW SHIELD IF ACTIVE
                 if(this.hasShield) {
                     ctx.beginPath();
                     ctx.lineWidth = 3;
@@ -676,17 +678,14 @@
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
                     let moveY = (Math.random()-0.5)*1.5; 
                     
-                    // --- SHIELD SPAWN LOGIC ---
                     let spawnShield = false;
                     let forceStatic = false; 
 
-                    // 1. Story Mode: Score 15-30
                     if (!infiniteMode && score >= 15 && score <= 30 && !hasShieldSpawned && Math.random() < 0.15 && !player.hasShield) {
                         spawnShield = true;
                         hasShieldSpawned = true;
                     }
                     
-                    // 2. Infinite Mode: Every 30 pipes
                     if (infiniteMode && pipeSpawnCount % 30 === 0 && !player.hasShield) {
                         spawnShield = true;
                     }
@@ -710,7 +709,6 @@
                     });
                 }
 
-                // MOVEMENT & COLLISION
                 for(let p of this.list) {
                     p.x -= SPEED;
                     p.top += p.moveY; 
@@ -932,7 +930,7 @@
 
             gameState = 'START';
             score = 0; frames = 0;
-            pipeSpawnCount = 0; // RESET PIPE COUNT
+            pipeSpawnCount = 0; 
             currentBiome = 0; 
             
             if (isUnlocked) {
@@ -1062,7 +1060,7 @@
         function handleInput(e) {
             if(e.type === 'keydown' && e.code === 'Space') e.preventDefault();
             if(e.target.id === 'perf-btn') return;
-            if(e.target.closest('#leaderboard')) return; // Allow interaction with leaderboard
+            if(e.target.closest('#leaderboard')) return;
 
             if(gameState === 'WIN_PAUSE') return;
             if(gameState === 'START') startGame();
@@ -1079,10 +1077,9 @@
         window.addEventListener('touchstart', handleInput, {passive: false});
 
         // --------------------------------------------------------
-        // FIREBASE & LEADERBOARD LOGIC (TABS + DYNAMIC RESET)
+        // FIREBASE & LEADERBOARD LOGIC
         // --------------------------------------------------------
 
-        // !!! PASTE YOUR FIREBASE CONFIG HERE !!!
         const firebaseConfig = {
             apiKey: "AIzaSyCTnLXpYRMw8pxaBS1cIqeeGqtD7A1Mtow",
             authDomain: "powa-2f1bc.firebaseapp.com",
@@ -1097,24 +1094,20 @@
 
         let currentLeaderboardListener = null;
 
-        // HELPER: Switch Tabs
         window.switchTab = function(mode) {
-            // Update Buttons
             const buttons = document.querySelectorAll('.tab-btn');
             buttons.forEach(b => b.classList.remove('active'));
             if(mode === 'daily') buttons[0].classList.add('active');
             else buttons[1].classList.add('active');
 
-            // Switch Data Source
             fetchLeaderboard(mode);
         };
 
-        // HELPER: Fetch & Render
         function fetchLeaderboard(mode) {
             const listDiv = document.getElementById('leaderboard-list');
             listDiv.innerHTML = "<div style='text-align:center; color:#0ff; padding-top:20px; animation:blink 1s infinite;'>LOADING...</div>";
 
-            if(currentLeaderboardListener) currentLeaderboardListener(); // Unsubscribe prev listener
+            if(currentLeaderboardListener) currentLeaderboardListener(); 
 
             const collectionName = (mode === 'daily') ? `leaderboard_${KEY_ID}` : "leaderboard";
 
@@ -1145,7 +1138,6 @@
                 });
         }
 
-        // HELPER: Save to specific collection (Handle Add vs Update)
         function submitToCollection(collectionName, name, score) {
             return db.collection(collectionName).where("name", "==", name).get()
             .then((snapshot) => {
@@ -1172,12 +1164,11 @@
             submitBtn.innerText = isAuto ? "AUTO-SENDING..." : "CHECKING...";
             submitBtn.disabled = true; nameInput.disabled = true;
 
-            // SAVE TO BOTH COLLECTIONS
             const dailyCollection = `leaderboard_${KEY_ID}`;
             
             Promise.all([
-                submitToCollection("leaderboard", name, score),   // All Time
-                submitToCollection(dailyCollection, name, score)  // Daily
+                submitToCollection("leaderboard", name, score),   
+                submitToCollection(dailyCollection, name, score)
             ]).then(() => {
                 submitBtn.innerText = "SENT!";
                 submitBtn.style.background = "#333";
@@ -1189,10 +1180,13 @@
         };
 
         initGalaxy(); initParticles(); resetLevel(); requestAnimationFrame(loop);
-        
-        // START ON DAILY TAB
         switchTab('daily');
+
+        // CHECK WARNING MODE
+        if (KEY_WARNING_MODE === "ON") {
+            const warnBox = document.getElementById('key-warning');
+            if(warnBox) warnBox.style.display = 'block';
+        }
     </script>
 </body>
 </html>
-
