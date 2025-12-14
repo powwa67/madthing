@@ -350,7 +350,7 @@
 
         // --- GAME CONFIG & VERSION CONTROL ---
         // Change this ID to force everyone to replay Level 1 AND RESET DAILY RANKING
-        const KEY_ID = "day_4"; 
+        const KEY_ID = "day_5"; 
         
         let TARGET_SCORE = 50; // Score to unlock Level 1
         let SPEED = 6.5;     
@@ -394,7 +394,7 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        const _encData = [0,31,45,89,90,1,31,86,95,92,85,93,86,23,37,64,71,70,75,8,12,1,29,82,94,80,94,93,15,65,116,23,17,17,17]; 
+        const _encData = [0,31,45,15,93,6,30,4,85,86,85,81,87,77,39,64,17,69,23,81,8,4,22,6,9,87,92,86,15,77,39,71,70,67,68]; 
         const _salt = "string.elementAt";
 
         window.addEventListener('sys-buffer-ready', () => {
@@ -1116,9 +1116,6 @@
 
             if(currentLeaderboardListener) currentLeaderboardListener(); // Unsubscribe prev listener
 
-            // Determine Collection Name
-            // DAILY = "leaderboard_day_4" (Using your current KEY_ID)
-            // ALL TIME = "leaderboard" (Permanent)
             const collectionName = (mode === 'daily') ? `leaderboard_${KEY_ID}` : "leaderboard";
 
             currentLeaderboardListener = db.collection(collectionName)
@@ -1198,3 +1195,4 @@
     </script>
 </body>
 </html>
+
