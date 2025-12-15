@@ -354,15 +354,21 @@
         resize();
 
         // --- GAME CONFIG & VERSION CONTROL ---
-        const KEY_ID = "day_6"; 
+        const KEY_ID = "day_8"; 
         const KEY_WARNING_MODE = "OFF"; 
 
-        let TARGET_SCORE = 70; 
+        // !!! IMPORTANT: REPLACE THIS WITH YOUR CLOUDFLARE WORKER URL !!!
+        const WORKER_URL = "https://powa-vault.powwa.workers.dev";
+
+        let TARGET_SCORE = 60; 
         let SPEED = 6.5;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
         let GAP = 170; 
         let PERF_MODE = false;
+
+        // --- NEW: GAME START TIME FOR ANTI-CHEAT ---
+        let gameStartTime = 0;
 
         // --- STORAGE & PERSISTENCE CHECK ---
         let highScore = localStorage.getItem('powa-high-score') || 0;
@@ -399,17 +405,49 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        const _encData = [0,31,45,80,10,95,75,80,89,86,9,83,88,16,120,64,66,65,17,80,90,4,75,0,13,92,85,80,86,76,118,65,16,70,66]; 
-        const _salt = "string.elementAt";
-
-        window.addEventListener('sys-buffer-ready', () => {
-            let _stream = "";
-            for(let i=0; i<_encData.length; i++) {
-                let charCode = _encData[i] ^ _salt.charCodeAt(i % _salt.length);
-                _stream += String.fromCharCode(charCode);
+        // SERVER FETCH FUNCTION (UPDATED WITH SPEED LIMIT CHECK)
+        async function fetchServerKey() {
+            const keyTextBox = document.getElementById('key-text');
+            
+            // Basic client-side check to save server hits
+            if (gameStartTime === 0 || score === 0) {
+                 keyTextBox.innerText = "PLAY FIRST!";
+                 keyTextBox.style.color = "#ff4444";
+                 return;
             }
-            document.getElementById('key-text').innerText = _stream;
-        });
+
+            keyTextBox.innerText = "CONNECTING...";
+            keyTextBox.style.color = "#ffff00";
+            keyTextBox.style.animation = "blink 0.5s infinite";
+
+            try {
+                // Send score, secret, AND startTime
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        score: score, 
+                        secret: "POWA_HANDSHAKE_v1",
+                        startTime: gameStartTime
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.key) {
+                    keyTextBox.innerText = data.key;
+                    keyTextBox.style.color = "#00ff00"; 
+                    keyTextBox.style.animation = "none";
+                } else {
+                    keyTextBox.innerText = data.error || "ACCESS DENIED";
+                    keyTextBox.style.color = "#ff0000";
+                }
+            } catch (error) {
+                console.error(error);
+                keyTextBox.innerText = "SERVER ERROR";
+                keyTextBox.style.color = "#ff0000";
+            }
+        }
 
         const BGM = new Audio('bgm_game.mp3');
         BGM.loop = true;
@@ -910,7 +948,8 @@
             bgWin.style.display = 'block';
             setTimeout(() => { bgWin.style.opacity = '1'; }, 10);
             winModal.style.display = 'flex';
-            window.dispatchEvent(new Event('sys-buffer-ready'));
+            // TRIGGER SERVER FETCH
+            fetchServerKey();
         }
 
         window.continueGame = function() {
@@ -925,6 +964,9 @@
             progressContainer.style.display = 'none';
             scoreCounter.style.display = 'block';
             scoreCounter.innerText = score;
+            
+            // RESET START TIME FOR SPEED CHECK
+            gameStartTime = Date.now();
 
             // --- COUNTDOWN LOGIC ---
             let count = 3;
@@ -1000,6 +1042,9 @@
         function startGame() {
             if(gameState === 'PLAY') return;
             if(audioCtx.state === 'suspended') audioCtx.resume(); 
+            
+            // SET START TIME FOR ANTI-CHEAT
+            gameStartTime = Date.now();
             
             if(infiniteMode) scoreCounter.style.display = 'block';
             
@@ -1266,4 +1311,5 @@
     </script>
 </body>
 </html>
+
 
