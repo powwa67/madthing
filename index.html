@@ -353,42 +353,99 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- GAME CONFIG & VERSION CONTROL ---
-        // AUTOMATIC DATE MATCHING (Must match Server logic)
-const KEY_ID = "day_" + new Date().toISOString().split('T')[0]; 
+        // --- GAME CONFIG & SERVER SYNC ---
+        // 1. Set variables to wait for Server Data
+        let KEY_ID = "LOADING..."; 
         const KEY_WARNING_MODE = "OFF"; 
 
-        // !!! IMPORTANT: REPLACE THIS WITH YOUR CLOUDFLARE WORKER URL !!!
-        const WORKER_URL = "https://powa-vault.powwa.workers.dev";
+        // !!! IMPORTANT: PASTE YOUR WORKER URL HERE !!!
+        const WORKER_URL = "https://powa-vault.powwa.workers.dev"; 
 
-        let TARGET_SCORE = 70; 
+        let TARGET_SCORE = 70;  // Make sure this matches your Worker score check!
         let SPEED = 7;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
         let GAP = 170; 
         let PERF_MODE = false;
-
-        // --- NEW: GAME START TIME FOR ANTI-CHEAT ---
         let gameStartTime = 0;
-
-        // --- STORAGE & PERSISTENCE CHECK ---
-        let highScore = localStorage.getItem('powa-high-score') || 0;
-        let storedKeyId = localStorage.getItem('powa-key-id');
-        let storedUnlock = localStorage.getItem('powa-unlocked');
-        
         let isUnlocked = false;
 
-        if(storedKeyId === KEY_ID && storedUnlock === 'true') {
-            isUnlocked = true;
-        } else {
-            if(storedKeyId !== KEY_ID) {
-                localStorage.setItem('powa-key-id', KEY_ID);
-                localStorage.removeItem('powa-unlocked');
+        // --- NEW: SERVER SYNC STARTUP ---
+        // This function asks the server for the current "Day ID"
+        async function initGameSync() {
+            const listDiv = document.getElementById('leaderboard-list');
+            listDiv.innerHTML = "<div style='text-align:center; color:#ffff00; padding-top:20px; animation:blink 0.5s infinite;'>SYNCING SERVER...</div>";
+
+            try {
+                // 1. Ask Server what "Day" it is (Action: GET_STATUS)
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: "GET_STATUS", secret: "POWA_HANDSHAKE_v1" })
+                });
+                
+                const data = await response.json();
+                
+                // 2. Set the Global ID based on Server's Answer
+                // The server sends back a hash like "day_a9b8c7d6" based on your API Key
+                if (data.dayId) {
+                    KEY_ID = data.dayId;
+                    console.log("Synced with Server. Day ID:", KEY_ID);
+                } else {
+                    // Fallback just in case
+                    KEY_ID = "day_" + new Date().toISOString().split('T')[0];
+                }
+                
+                // 3. Check if we need to reset the player's level
+                checkProgressReset();
+                
+                // 4. Load the correct leaderboard
+                switchTab('daily');
+                
+            } catch (err) {
+                console.error("Server Sync Failed", err);
+                // If server is offline, fallback to local date
+                KEY_ID = "day_" + new Date().toISOString().split('T')[0]; 
+                checkProgressReset();
+                switchTab('daily');
             }
-            isUnlocked = false;
         }
-        
-        menuHighScore.innerText = `BEST: ${highScore}`;
+
+        // --- RESET LOGIC ---
+        function checkProgressReset() {
+            let highScore = localStorage.getItem('powa-high-score') || 0;
+            let storedKeyId = localStorage.getItem('powa-key-id');
+            let storedUnlock = localStorage.getItem('powa-unlocked');
+            
+            // IF the Server's Day ID is different from what we saved last time...
+            if (storedKeyId !== KEY_ID) {
+                console.log("New Challenge Detected! Resetting Progress.");
+                localStorage.setItem('powa-key-id', KEY_ID); // Save the new Day ID
+                localStorage.removeItem('powa-unlocked');    // Lock the game again
+                isUnlocked = false;
+            } else {
+                // Same Day = Keep Progress
+                isUnlocked = (storedUnlock === 'true');
+            }
+
+            menuHighScore.innerText = `BEST: ${highScore}`;
+            
+            // Update UI based on locked/unlocked status
+            if (isUnlocked) {
+                infiniteMode = true;
+                progressContainer.style.display = 'none';
+                scoreCounter.style.display = 'block'; 
+                scoreCounter.innerText = "0";
+            } else {
+                infiniteMode = false;
+                progressContainer.style.display = 'flex';
+                scoreCounter.style.display = 'none';
+                updateProgress();
+            }
+        }
+
+        // START THE SYNC IMMEDIATELY
+        initGameSync();
 
         // --- BIOMES DEFINITION ---
         const BIOMES = [
@@ -1325,6 +1382,7 @@ const KEY_ID = "day_" + new Date().toISOString().split('T')[0];
     </script>
 </body>
 </html>
+
 
 
 
