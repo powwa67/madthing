@@ -964,53 +964,55 @@
         };
     
         // --- CORE FUNCTIONS ---
-       function die() {
+        // --- FIXED DIE FUNCTION: WAIT FOR MODAL ---
+        function die() {
+            // 1. Save High Score locally immediately
             if(score > highScore) {
                 highScore = score;
                 localStorage.setItem('powa-high-score', highScore);
                 menuHighScore.innerText = `BEST: ${highScore}`;
             }
 
+            // 2. Visual Effects
             flashScreen(); SFX.explode();
-            
-            // Visuals
             if(!PERF_MODE) {
                 for(let i=0; i<25; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1.0, color: '#0ff', size: Math.random()*8+3});
             }
             
+            // 3. Stop the Game Loop
             gameState = 'DIE_ANIM';
             
+            // 4. Update Menu Text
             deathScoreDisplay.innerText = `SCORE: ${score}`;
             deathBestDisplay.innerText = `BEST: ${highScore}`;
 
+            // 5. Show "Fail" GIF
             bgFail.style.display = 'block';
             setTimeout(() => { bgFail.style.opacity = '1'; }, 10);
             
-            // --- FIXED CRASH: WAIT FOR MODAL TO OPEN ---
+            // 6. DELAY MENU OPENING (Prevent Freeze)
             setTimeout(() => { 
+                // FORCE MENU OPEN FIRST
                 deathModal.style.display = 'flex'; 
                 
-                try {
-                    const savedName = localStorage.getItem('powa-username');
-                    if (savedName) {
-                        document.getElementById('username-input').value = savedName;
-                        // Safe Check before auto-submitting
-                        if (typeof window.submitScore === "function") {
-                            window.submitScore(true); 
-                        }
-                    } else {
-                        // Reset button for manual entry
-                        const btn = document.getElementById('submit-score-btn');
-                        const input = document.getElementById('username-input');
-                        if(btn) {
-                            btn.disabled = false;
-                            btn.innerText = "SUBMIT SCORE";
-                            btn.style.background = "linear-gradient(180deg, #00aaff, #0055aa)";
-                        }
-                        if(input) input.disabled = false;
+                // THEN try to submit (Silently)
+                const savedName = localStorage.getItem('powa-username');
+                if (savedName) {
+                    document.getElementById('username-input').value = savedName;
+                    // We use .catch() here so if it crashes, it doesn't stop the game
+                    if (typeof window.submitScore === "function") {
+                        window.submitScore(true).catch(e => console.log("Auto-submit error:", e));
                     }
-                } catch(err) {
-                    console.error("Auto-submit failed gracefully:", err);
+                } else {
+                    // Enable manual entry
+                    const btn = document.getElementById('submit-score-btn');
+                    const input = document.getElementById('username-input');
+                    if(btn) {
+                        btn.disabled = false;
+                        btn.innerText = "SUBMIT SCORE";
+                        btn.style.background = "linear-gradient(180deg, #00aaff, #0055aa)";
+                    }
+                    if(input) input.disabled = false;
                 }
             }, 800);
         }
