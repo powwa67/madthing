@@ -749,7 +749,6 @@ const obstacles = {
                         items.push({ x: width + 20, y: topH + (GAP / 2), type: spawnType, taken: false });
                     }
                     
-                    // CALCULATE CENTER Y FOR BREATHING
                     let centerY = topH + (GAP / 2);
 
                     this.list.push({
@@ -758,22 +757,16 @@ const obstacles = {
                         isAnomaly: forceStatic ? false : isAnomaly,     
                         anomalySpeed: forceStatic ? 0 : anomalySpeed, 
                         
-                        // --- UNIQUE BREATHING DNA ---
-                        // 1. Center Point: The pipe expands/contracts around this Y position
+                        // --- TRAP & BREATHING LOGIC ---
                         centerY: centerY,
-                        
-                        // 2. Speed: How fast this specific pipe opens/closes
-                        // Random between 0.03 (Slow) and 0.08 (Fast)
                         breathSpeed: 0.03 + Math.random() * 0.05,
-                        
-                        // 3. Phase: Starts the sine wave at a random point
-                        // This ensures pipes are never synchronized
                         breathPhase: Math.random() * Math.PI * 2,
-                        
-                        // 4. Amplitude: How much the gap changes size
-                        // Random range of motion (Deep breath vs Shallow breath)
                         breathAmp: 30 + Math.random() * 40,
-                        // ----------------------------
+                        
+                        // New: 40% chance to be a "Sentient Trap"
+                        // These pillars ignore rhythm and crush you when you get close
+                        isTrap: !isAnomaly && Math.random() < 0.4, 
+                        // ------------------------------
 
                         hasBeenHit: false
                     });
@@ -786,26 +779,39 @@ const obstacles = {
                     if (!timeStopActive) {
                         
                         if (p.isAnomaly) {
-                            // --- ANOMALY: Moves the whole gap up/down (Elevator) ---
+                            // --- ANOMALY (Elevator) ---
                             p.top += p.anomalySpeed;
                             p.bottom -= p.anomalySpeed; 
                             if(p.top < 40 || p.top > height - GAP - 40) p.anomalySpeed *= -1;
                         } else {
-                            // --- STANDARD: Smooth Independent Breathing ---
+                            // --- STANDARD & TRAP LOGIC ---
                             
-                            // 1. Calculate the wave (-1 to +1) based on time, unique speed, and unique start point
+                            // 1. Calculate Base Sine Wave Gap
                             let wave = Math.sin(frames * p.breathSpeed + p.breathPhase);
-                            
-                            // 2. Calculate the actual gap size for this frame
-                            // Base gap is 170. It expands/contracts by breathAmp.
-                            // E.g., if Amp is 40, Gap goes from 130px to 210px.
                             let currentGap = 170 + (wave * p.breathAmp);
                             
-                            // 3. Apply the gap around the fixed Center Y
+                            // 2. TRAP LOGIC: Proximity Squeeze
+                            if (p.isTrap) {
+                                let distToPlayer = p.x - player.x;
+                                
+                                // If player is approaching (within 300px) and hasn't passed
+                                if (distToPlayer < 300 && distToPlayer > -50) {
+                                    // Calculate "Panic Squeeze"
+                                    // The closer you are (300 -> 0), the more we subtract from the gap.
+                                    // We override the sine wave's "open" phase.
+                                    let panicFactor = (300 - distToPlayer) * 0.35; 
+                                    currentGap -= panicFactor;
+                                }
+                            }
+
+                            // 3. Absolute Safety Clamp
+                            // Ensure it's technically passable (player is ~32px, gap min 90px)
+                            if (currentGap < 90) currentGap = 90;
+                            
+                            // 4. Apply Gap
                             p.top = p.centerY - (currentGap / 2);
                             p.bottom = height - (p.centerY + (currentGap / 2));
                             
-                            // 4. Safety Clamps (Visual polish)
                             if (p.top < 10) p.top = 10;
                             if (p.bottom < 10) p.bottom = 10;
                         }
@@ -854,7 +860,13 @@ const obstacles = {
 
                 for(let p of this.list) {
                     let warningColor = p.isAnomaly && (frames % 20 < 10) ? "#ff0000" : mainColor;
-                    let activeColor = p.isAnomaly ? warningColor : mainColor;
+                    
+                    // --- VISUAL FEEDBACK FOR TRAPS ---
+                    // If it's a trap and close to player, turn it menacingly bright or reddish
+                    let isActiveTrap = p.isTrap && (p.x - player.x < 300) && (p.x - player.x > -50);
+                    let trapColor = isActiveTrap ? "#ffaa00" : mainColor; 
+                    
+                    let activeColor = p.isAnomaly ? warningColor : trapColor;
                     if (p.hasBeenHit) activeColor = "#555";
 
                     if (era === 0) {
@@ -1335,6 +1347,7 @@ const obstacles = {
     </script>
 </body>
 </html>
+
 
 
 
