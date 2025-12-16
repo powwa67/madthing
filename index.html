@@ -426,6 +426,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
+                        action: "GET_KEY", // <--- ADD THIS LINE
                         score: score, 
                         secret: "POWA_HANDSHAKE_v1",
                         startTime: gameStartTime
@@ -1270,34 +1271,46 @@
             });
         }
 
-        window.submitScore = function(isAuto = false) {
+        window.submitScore = async function(isAuto = false) {
             const nameInput = document.getElementById('username-input');
             const submitBtn = document.getElementById('submit-score-btn');
             let rawName = nameInput.value.toUpperCase().trim();
             const name = rawName.substring(0, 15) || "ANONYMOUS";
             localStorage.setItem('powa-username', name);
 
-            if(score===0 && !isAuto) { alert("Play first!"); return; }
+            if(score === 0 && !isAuto) { alert("Play first!"); return; }
             
-            // SECURITY FIX: FORCE NUMBER TYPE
-            let scoreToSend = parseInt(score, 10);
-            
-            submitBtn.innerText = isAuto ? "AUTO-SENDING..." : "CHECKING...";
+            submitBtn.innerText = isAuto ? "AUTO-SENDING..." : "SENDING...";
             submitBtn.disabled = true; nameInput.disabled = true;
 
-            const dailyCollection = `leaderboard_${KEY_ID}`;
-            
-            Promise.all([
-                submitToCollection("leaderboard", name, scoreToSend),   
-                submitToCollection(dailyCollection, name, scoreToSend)
-            ]).then(() => {
-                submitBtn.innerText = "SENT!";
-                submitBtn.style.background = "#333";
-            }).catch((err) => {
+            try {
+                // SEND TO CLOUDFLARE SERVER
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: "SUBMIT_SCORE", // Tell server this is a score submission
+                        score: score,
+                        name: name,
+                        secret: "POWA_HANDSHAKE_v1",
+                        startTime: gameStartTime 
+                    })
+                });
+
+                if (response.ok) {
+                    submitBtn.innerText = "SENT!";
+                    submitBtn.style.background = "#333";
+                    // Refresh leaderboard to show new score
+                    setTimeout(() => fetchLeaderboard('daily'), 1000);
+                } else {
+                    submitBtn.innerText = "ERROR";
+                    submitBtn.disabled = false;
+                }
+            } catch (err) {
                 console.error(err);
-                submitBtn.innerText = "ERROR";
+                submitBtn.innerText = "OFFLINE";
                 submitBtn.disabled = false;
-            });
+            }
         };
 
         initGalaxy(); initParticles(); resetLevel(); requestAnimationFrame(loop);
@@ -1311,6 +1324,7 @@
     </script>
 </body>
 </html>
+
 
 
 
