@@ -702,7 +702,7 @@
             }
         };
 
-        const obstacles = {
+const obstacles = {
             list: [],
             
             update: function() {
@@ -729,7 +729,14 @@
                     let speedVal = 2; 
                     let anomalyDir = Math.random() < 0.5 ? 1 : -1;
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
-                    let moveY = (Math.random()-0.5)*1.5; 
+                    
+                    // --- UPDATED MOVEMENT LOGIC HERE ---
+                    // Old: (Math.random()-0.5)*1.5 (Too slow/subtle)
+                    // New: Ensures a minimum speed of 0.5, max 2.5. Moves much more.
+                    let moveDir = Math.random() < 0.5 ? 1 : -1;
+                    let moveMag = 0.5 + (Math.random() * 2.0); 
+                    let moveY = moveDir * moveMag;
+                    // -----------------------------------
                     
                     // --- SPAWN LOGIC START ---
                     let spawnType = null;
@@ -778,8 +785,15 @@
                     
                     // FREEZE HAZARDS IF TIME STOP IS ACTIVE
                     if (!timeStopActive) {
+                        // --- UPDATED LOOP LOGIC ---
                         p.top += p.moveY; 
-                        if(p.top < 30 || p.top > height - GAP - 30) p.moveY *= -1;
+                        p.bottom -= p.moveY; // Important: Move bottom opposite to top to keep Gap constant
+                        
+                        // Bounce off the ceiling/floor boundaries
+                        if(p.top < 30 || p.top > height - GAP - 30) {
+                            p.moveY *= -1;
+                        }
+                        // --------------------------
 
                         if(p.isAnomaly) {
                             p.top += p.anomalySpeed;
@@ -822,9 +836,13 @@
                 }
                 if(this.list.length > 0 && this.list[0].x < -100) this.list.shift();
             },
-
+            
+            // ... (keep the draw: function part exactly as it is in your original file) ...
             draw: function() {
-                let era = Math.floor(score / 10) % 3; 
+                // You don't need to change anything in the draw function, 
+                // just paste the draw code from your file here if replacing the whole object.
+                // For brevity, ensure you copy the 'draw' block from your original file.
+                 let era = Math.floor(score / 10) % 3; 
                 let mainColor = BIOMES[currentBiome].border;
                 if(currentBiome === 5) mainColor = `hsl(${globalHue}, 100%, 60%)`;
                 let pulse = Math.sin(frames * 0.1) * 0.5 + 0.5;
@@ -1312,6 +1330,7 @@
     </script>
 </body>
 </html>
+
 
 
 
