@@ -421,11 +421,12 @@
             keyTextBox.style.animation = "blink 0.5s infinite";
 
             try {
-                // Send score, secret, AND startTime
+                // Send score, secret, startTime, AND THE ACTION
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
+                        action: "GET_KEY",  // <--- THIS WAS MISSING!
                         score: score, 
                         secret: "POWA_HANDSHAKE_v1",
                         startTime: gameStartTime
@@ -1311,6 +1312,7 @@
     </script>
 </body>
 </html>
+
 
 
 
