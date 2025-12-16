@@ -732,19 +732,13 @@ const obstacles = {
                     
                     // --- SPAWN LOGIC ---
                     let spawnType = null;
-
-                    // 1. SHIELD
                     if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && !player.hasShield) {
-                        spawnType = 'SHIELD';
-                        level1ShieldCount++;
+                        spawnType = 'SHIELD'; level1ShieldCount++;
                     } else if (infiniteMode && pipeSpawnCount % 25 === 0 && !player.hasShield) {
                         spawnType = 'SHIELD';
                     }
-                    
-                    // 2. CLOCK
                     if (!infiniteMode && score >= 30 && level1ClockCount < 2 && Math.random() < 0.15 && !timeStopActive) {
-                        spawnType = 'CLOCK';
-                        level1ClockCount++;
+                        spawnType = 'CLOCK'; level1ClockCount++;
                     } else if (infiniteMode && pipeSpawnCount % 30 === 0 && !timeStopActive) {
                         spawnType = 'CLOCK';
                     }
@@ -758,16 +752,22 @@ const obstacles = {
                     this.list.push({
                         x: width, w: 55, top: topH, bottom: height-GAP-topH, 
                         passed: false, 
-                        
-                        // --- UNPREDICTABLE MOVEMENT INIT ---
                         isAnomaly: forceStatic ? false : isAnomaly,     
                         anomalySpeed: forceStatic ? 0 : anomalySpeed, 
                         
-                        // New Logic: "Target Seeking"
-                        targetGap: 100 + Math.random() * 130, // Random target between tight (100) and wide (230)
-                        crushSpeed: 0.5 + Math.random() * 2.5, // Random speed for this phase
-                        // -----------------------------------
+                        // --- CHAOS DNA (Unique per pillar) ---
+                        // Wave A: The slow, deep "breathing"
+                        chaosSpeedA: 0.02 + Math.random() * 0.05, 
+                        chaosPhaseA: Math.random() * Math.PI * 2, // Random start point 0-360 deg
                         
+                        // Wave B: The faster, smaller "jitters"
+                        chaosSpeedB: 0.08 + Math.random() * 0.15,
+                        chaosPhaseB: Math.random() * Math.PI * 2,
+                        
+                        // How wide this specific pillar is allowed to open/close
+                        chaosAmp: 30 + Math.random() * 30, 
+                        // -------------------------------------
+
                         hasBeenHit: false
                     });
                 }
@@ -779,40 +779,39 @@ const obstacles = {
                     if (!timeStopActive) {
                         
                         if (p.isAnomaly) {
-                            // --- ANOMALY (Elevator Effect) ---
+                            // --- ANOMALY: Moves the whole gap up/down (Elevator) ---
                             p.top += p.anomalySpeed;
                             p.bottom -= p.anomalySpeed; 
                             if(p.top < 40 || p.top > height - GAP - 40) p.anomalySpeed *= -1;
                         } else {
-                            // --- STANDARD (Unpredictable Breathing) ---
-                            let currentGap = height - p.top - p.bottom;
+                            // --- STANDARD: Dual-Wave Chaos (Crushing) ---
                             
-                            // 1. Move towards the target gap size
-                            // If Gap is bigger than Target, Shrink (Positive change to top/bottom)
-                            // If Gap is smaller than Target, Grow (Negative change to top/bottom)
-                            let direction = (currentGap > p.targetGap) ? 1 : -1;
-                            let moveAmount = direction * p.crushSpeed;
+                            // 1. Calculate the center of the current gap (we want to crush around this point)
+                            // Note: p.bottom is the HEIGHT of the bottom block, not Y coord.
+                            // Current Gap Size = Height - TopHeight - BottomHeight
+                            let currentGapYStart = p.top;
+                            let currentGapYEnd = height - p.bottom;
+                            let centerY = (currentGapYStart + currentGapYEnd) / 2;
 
-                            p.top += moveAmount;
-                            p.bottom += moveAmount;
-
-                            // 2. Decision Logic: Change Target?
-                            // Condition A: We reached the target (gap is close enough)
-                            // Condition B: Random "Twitch" (1% chance per frame to change mind mid-movement)
-                            if (Math.abs(currentGap - p.targetGap) < 5 || Math.random() < 0.01) {
-                                // Pick a NEW random target
-                                p.targetGap = 90 + Math.random() * 150; // Randomize target again
-                                
-                                // Pick a NEW random speed (Slow crawl or fast snap)
-                                p.crushSpeed = 0.5 + Math.random() * 2.0;
-                                
-                                // Safety clamp: Don't let the gap get impossibly small or huge
-                                if (p.targetGap < 90) p.targetGap = 90;
-                                if (p.targetGap > 240) p.targetGap = 240;
-                            }
+                            // 2. Generate a chaotic gap size using two interfering sine waves
+                            // This ensures the movement is smooth but never repeats efficiently
+                            let waveA = Math.sin(frames * p.chaosSpeedA + p.chaosPhaseA);
+                            let waveB = Math.cos(frames * p.chaosSpeedB + p.chaosPhaseB);
                             
-                            // 3. Absolute Safety Clamp (Prevent negative size glitches)
-                            if (currentGap < 80) { p.top -= 2; p.bottom -= 2; p.targetGap = 200; } 
+                            // Combine them: Base Gap (170) + Large Slow Wave + Small Fast Wave
+                            let newGapSize = 170 + (waveA * p.chaosAmp) + (waveB * 15);
+
+                            // Safety Limits
+                            if (newGapSize < 90) newGapSize = 90;
+                            if (newGapSize > 260) newGapSize = 260;
+
+                            // 3. Apply the new gap size around the center point
+                            p.top = centerY - (newGapSize / 2);
+                            p.bottom = height - (centerY + (newGapSize / 2));
+                            
+                            // 4. Boundary checks (Don't let pillars leave screen)
+                            if (p.top < 10) { p.top = 10; }
+                            if (p.bottom < 10) { p.bottom = 10; }
                         }
                     }
 
@@ -1340,6 +1339,7 @@ const obstacles = {
     </script>
 </body>
 </html>
+
 
 
 
