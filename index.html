@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POWA-PROXY: JINGLE BALLS</title>
+    <title>POWA-PROXY: JINGLE (WEEKLY)</title>
     <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Russo+One&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -379,19 +379,17 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- GAME CONFIG (DYNAMIC) ---
+        // --- GAME CONFIG (UPDATED) ---
         const KEY_ID = "day_23"; 
         const KEY_WARNING_MODE = "OFF"; 
         const WORKER_URL = "https://powa-vault.powwa.workers.dev"; 
 
-        let TARGET_SCORE = 50; 
+        let TARGET_SCORE = 50; // CHANGED TO 50
         
         // Dynamic Difficulty Variables
         let BASE_SPEED = 7;
         let currentSpeed = 7;
-        
         let BASE_GAP = 170;
-        
         let GRAVITY = 0.6;
         let JUMP = 8.5;
         
@@ -433,7 +431,16 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        // SERVER FETCH
+        // --- HELPERS ---
+        // WEEKLY ID HELPER (ISO-8601)
+        function getWeekId() {
+            const d = new Date();
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            const weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+            return `week_${d.getUTCFullYear()}_${weekNo}`;
+        }
+
         async function fetchServerKey() {
             const keyTextBox = document.getElementById('key-text');
             if (gameStartTime === 0 || score === 0) {
@@ -505,10 +512,8 @@
 
         const SFX = {
             jump: () => {
-                // JINGLE EFFECT LAYERING
-                playTone(1200, 'sine', 0.1, 0.05); // Base Jump
+                playTone(1200, 'sine', 0.1, 0.05); 
                 playTone(1500, 'triangle', 0.1, 0.05, 0.02);
-                // SLEIGH BELLS
                 playTone(2000, 'sine', 0.1, 0.05, 0); 
                 playTone(2500, 'sine', 0.1, 0.03, 0.05);
                 playTone(3000, 'sine', 0.1, 0.02, 0.1);
@@ -517,13 +522,10 @@
             shieldUp: () => { playTone(440, 'triangle', 0.2, 0.1); playTone(554, 'triangle', 0.2, 0.1, 0.1); playTone(659, 'triangle', 0.3, 0.1, 0.2); },
             shieldBreak: () => { playTone(150, 'sawtooth', 0.3, 0.2); playTone(100, 'square', 0.3, 0.2, 0.05); },
             timeStop: () => { playTone(1000, 'sine', 1.0, 0.1); playTone(2000, 'triangle', 0.5, 0.1, 0.1); },
-            
-            // PANIC ALARM SOUND
             panic: () => {
                 playTone(100, 'sawtooth', 1.0, 0.3); 
                 playTone(80, 'square', 1.0, 0.3, 0.1);
             },
-            
             win: () => {
                 let notes = [659, 659, 659, 0, 659, 659, 659, 0, 659, 783, 523, 587, 659];
                 notes.forEach((n, i) => { if(n>0) playTone(n, 'triangle', 0.3, 0.1, i*0.25); });
@@ -578,7 +580,7 @@
         let lastTime = 0;
         let accumulator = 0;
 
-        // --- HELPERS ---
+        // --- HELPERS 2 ---
         async function copyKey(elementId, btnElement) {
             const text = document.getElementById(elementId).innerText;
             try {
@@ -711,7 +713,7 @@
             ctx.globalAlpha=1;
         }
 
-        // --- GAME OBJECTS ---
+        // --- GAME OBJECTS (UPDATED) ---
         const player = {
             x: 60, y: 200, size: 36, velocity: 0, rotation: 0,
             shieldCount: 0, 
@@ -809,7 +811,6 @@
                 currentSpeed = Math.min(11, BASE_SPEED + (score * 0.06));
                 
                 // Gap decreases, but hard-capped at 120px to prevent "Impossible Squeeze"
-                // (Unless it's an anomaly, which moves, so we keep the gap slightly wider)
                 let dynamicGap = Math.max(120, BASE_GAP - (score * 1.2));
                 
                 // Adjust spawn rate
@@ -840,7 +841,7 @@
                     let anomalySpeed = isAnomaly ? (baseAnomalySpeed * (Math.random()<0.5?1:-1)) : 0;
                     let centerY = topH + (dynamicGap / 2);
 
-                    // --- Spawn Items Logic (Unchanged) ---
+                    // --- Spawn Items Logic ---
                     let spawnType = null;
                     if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && player.shieldCount === 0) {
                         spawnType = 'SHIELD'; level1ShieldCount++;
@@ -856,7 +857,6 @@
                         items.push({ x: width + 100, y: Math.random() * (height - 200) + 100, type: 'MYSTERY', taken: false });
                     }
                     if (spawnType) items.push({ x: width + 20, y: topH + (dynamicGap / 2), type: spawnType, taken: false });
-                    // -------------------------------------
                     
                     this.list.push({
                         x: width, w: 55, 
@@ -882,7 +882,6 @@
                     
                     if (!timeStopActive) {
                         // --- PHYSICS FIXES ---
-                        
                         // 1. Orange Mode / Anomaly Handling
                         if (orangeModeActive && p.anomalySpeed === 0) {
                             p.anomalySpeed = (Math.random() < 0.5 ? 1 : -1) * 2.5; // Reduced panic speed slightly
@@ -896,9 +895,6 @@
                              p.bottom -= p.anomalySpeed; 
                              
                              // 2. THE TETHER FIX
-                             // Instead of bouncing off the screen edges (which makes it fly away),
-                             // bounce off a "Leash" relative to where it spawned.
-                             // This guarantees the gap is always *near* the expected path.
                              let upperLimit = p.originalTop - p.moveRange;
                              let lowerLimit = p.originalTop + p.moveRange;
                              
@@ -926,7 +922,7 @@
                         }
                     }
 
-                    // Collision Logic (Unchanged)
+                    // Collision Logic
                     let pad = 8; 
                     if(!p.hasBeenHit && 
                        player.x + pad < p.x + p.w && 
@@ -957,9 +953,6 @@
             },
             
             draw: function() {
-                // ... (Draw function remains exactly the same as previous version) ...
-                // Copy the draw function from the previous code block or keep it if you are just replacing the 'obstacles' object
-                // If you need the draw code again let me know, but it is unchanged.
                 let era = Math.floor(score / 10) % 2; 
                 for(let p of this.list) {
                     let activeColor = "#fff";
@@ -1369,12 +1362,11 @@
             if(currentLeaderboardListener) currentLeaderboardListener(); 
 
             let collectionName;
-    if (mode === 'daily') {
-        collectionName = `leaderboard_${KEY_ID}`;
-    } else {
-        // Instead of just "leaderboard", we use our helper function
-        collectionName = `leaderboard_${getWeekId()}`;
-    }
+            if (mode === 'daily') {
+                collectionName = `leaderboard_${KEY_ID}`;
+            } else {
+                collectionName = `leaderboard_${getWeekId()}`;
+            }
 
             currentLeaderboardListener = db.collection(collectionName)
                 .orderBy("score", "desc")
@@ -1438,12 +1430,12 @@
             }
 
             const dailyCollection = `leaderboard_${KEY_ID}`;
+            const weeklyCollection = `leaderboard_${getWeekId()}`;
             
             Promise.all([
-                const dailyCollection = `leaderboard_${KEY_ID}`;
-        const weeklyCollection = `leaderboard_${getWeekId()}`; // NEW
-        
-        Promise.all([
+                submitToCollection(weeklyCollection, name, scoreToSend),   
+                submitToCollection(dailyCollection, name, scoreToSend)
+            ]).then(() => {
                 if(submitBtn) {
                     submitBtn.innerText = "SENT!";
                     submitBtn.style.background = "#333";
@@ -1467,5 +1459,3 @@
     </script>
 </body>
 </html>
-
-
