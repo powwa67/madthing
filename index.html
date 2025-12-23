@@ -380,11 +380,11 @@
         resize();
 
         // --- GAME CONFIG (UPDATED) ---
-        const KEY_ID = "day_24"; 
+        const KEY_ID = "day_23"; 
         const KEY_WARNING_MODE = "OFF"; 
         const WORKER_URL = "https://powa-vault.powwa.workers.dev"; 
 
-        let TARGET_SCORE = 50; // CHANGED TO 50
+        let TARGET_SCORE = 40; // CHANGED TO 50
         
         // Dynamic Difficulty Variables
         let BASE_SPEED = 7;
@@ -721,19 +721,8 @@
             update: function() {
                 // Risk vs Reward: Heavier with more shields
                 this.velocity += GRAVITY + (this.shieldCount * 0.05);
-
-                // --- BLIZZARD MECHANIC ---
-                // Random wind gusts after score 10
-                if (gameState === 'PLAY' && score > 10 && Math.random() < 0.02) {
-                    let windForce = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 3 + 1);
-                    this.velocity += windForce;
-                    
-                    if(!PERF_MODE) {
-                        let type = windForce > 0 ? "DOWNDRAFT!" : "UPDRAFT!";
-                        let col = windForce > 0 ? "#00ffff" : "#ffcc00";
-                        floatTexts.push({text: type, x: this.x, y: this.y - 40, life: 0.8, vy: -1, color: col});
-                    }
-                }
+                
+                // --- WIND REMOVED HERE ---
                 
                 this.y += this.velocity;
                 
@@ -1459,4 +1448,3 @@
     </script>
 </body>
 </html>
-
