@@ -795,11 +795,12 @@
         const obstacles = {
             list: [],
             update: function() {
-                // 1. REBALANCED DIFFICULTY CURVE
-                // Speed increases slower, capped at 11 (Human reaction limit)
-                currentSpeed = Math.min(11, BASE_SPEED + (score * 0.06));
+                // 1. REBALANCED DIFFICULTY CURVE (USER REQUEST: CAP SPEED 10)
+                // Speed increases with score but strictly caps at 10.
+                currentSpeed = Math.min(10, BASE_SPEED + (score * 0.06));
                 
                 // Gap decreases, but hard-capped at 120px to prevent "Impossible Squeeze"
+                // This preserves inconsistency of placement but stops the gap from shrinking forever.
                 let dynamicGap = Math.max(120, BASE_GAP - (score * 1.2));
                 
                 // Adjust spawn rate
@@ -818,11 +819,11 @@
                     if(topH < minH) topH = minH + 20; if(topH > maxH) topH = maxH - 20;
                     
                     // --- BALANCED CHAOS LOGIC ---
-                    let anomalyChance = 0.2 + (score * 0.012);
+                    // Capped to 0.6 (60%) so it doesn't become impossible in infinite mode.
+                    let anomalyChance = Math.min(0.6, 0.2 + (score * 0.012));
                     let isAnomaly = Math.random() < anomalyChance;
                     
                     // CAP THE VERTICAL SPEED
-                    // Previous max was 4.5 (Too fast for gravity). New max is 3.2.
                     let baseAnomalySpeed = 1.5;
                     if(score > 30) baseAnomalySpeed = 2.2;
                     if(score > 50) baseAnomalySpeed = 3.2;
@@ -1448,5 +1449,3 @@
     </script>
 </body>
 </html>
-
-
