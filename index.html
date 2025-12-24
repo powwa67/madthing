@@ -384,7 +384,7 @@
         const KEY_WARNING_MODE = "OFF"; 
         const WORKER_URL = "https://powa-vault.powwa.workers.dev"; 
 
-        let TARGET_SCORE = 40; // CHANGED TO 50
+        let TARGET_SCORE = 40; 
         
         // Dynamic Difficulty Variables
         let BASE_SPEED = 7;
@@ -722,8 +722,6 @@
                 // Risk vs Reward: Heavier with more shields
                 this.velocity += GRAVITY + (this.shieldCount * 0.05);
                 
-                // --- WIND REMOVED HERE ---
-                
                 this.y += this.velocity;
                 
                 if(frames % 4 === 0 && gameState === 'PLAY') {
@@ -912,21 +910,48 @@
                         }
                     }
 
-                    // Collision Logic
-                    let pad = 8; 
-                    if(!p.hasBeenHit && 
-                       player.x + pad < p.x + p.w && 
-                       player.x + player.size - pad > p.x && 
-                       (player.y + pad < p.top || player.y + player.size - pad > height - p.bottom)) {
-                        
-                        if (player.shieldCount > 0) {
-                            player.shieldCount--; p.hasBeenHit = true; SFX.shieldBreak(); triggerShake();
-                            if(!PERF_MODE) {
-                                floatTexts.push({text: "SHIELD DOWN!", x: player.x, y: player.y-40, life: 1.5, vy: -1});
-                                for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#fff', size: 4});
+                    // --- NEW FORGIVING COLLISION LOGIC ---
+                    if (!p.hasBeenHit) {
+                        // 1. Define the Player's Circular Hitbox
+                        // We shrink the radius by 6px to create the "Forgiveness"
+                        // The player is 36px wide. The hit radius becomes 12px.
+                        // This allows the visual corners of the box to clip through pipes safely.
+                        let hitRadius = (player.size / 2) - 6; 
+                        let playerCx = player.x + (player.size / 2);
+                        let playerCy = player.y + (player.size / 2);
+
+                        // 2. Helper Function: Circle vs Rectangle Collision
+                        // Checks if the circle is touching the Top Pipe or Bottom Pipe
+                        const checkHit = (rectX, rectY, rectW, rectH) => {
+                            // Find the point on the rectangle closest to the circle center
+                            let closestX = Math.max(rectX, Math.min(playerCx, rectX + rectW));
+                            let closestY = Math.max(rectY, Math.min(playerCy, rectY + rectH));
+
+                            // Calculate the distance between the circle center and that closest point
+                            let distanceX = playerCx - closestX;
+                            let distanceY = playerCy - closestY;
+
+                            // If distance is less than radius, we have a hit
+                            return (distanceX * distanceX + distanceY * distanceY) < (hitRadius * hitRadius);
+                        };
+
+                        // 3. Perform the checks
+                        let hitTop = checkHit(p.x, 0, p.w, p.top);
+                        let hitBot = checkHit(p.x, height - p.bottom, p.w, p.bottom);
+
+                        if (hitTop || hitBot) {
+                            if (player.shieldCount > 0) {
+                                player.shieldCount--; 
+                                p.hasBeenHit = true; 
+                                SFX.shieldBreak(); 
+                                triggerShake();
+                                if(!PERF_MODE) {
+                                    floatTexts.push({text: "SHIELD DOWN!", x: player.x, y: player.y-40, life: 1.5, vy: -1});
+                                    for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#fff', size: 4});
+                                }
+                            } else {
+                                die();
                             }
-                        } else {
-                            die();
                         }
                     }
 
@@ -1449,4 +1474,3 @@
     </script>
 </body>
 </html>
-
